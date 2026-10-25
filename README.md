@@ -95,10 +95,8 @@ If it isn't reachable, your router is probably isolating devices. Use a phone ho
    ```
    sudo networksetup -setmanual Wi-Fi 172.20.10.5 255.255.255.240 172.20.10.1
    ```
-   **Undo it afterwards**, or the Mac won't be able to join other Wi-Fi networks:
-   ```
-   sudo networksetup -setdhcp Wi-Fi
-   ```
+   **Undo it afterwards**, or the Mac won't be able to join other Wi-Fi networks. See
+   [Back to home Wi-Fi](#back-to-home-wi-fi-do-this-every-time-you-used-the-hotspot).
 
 ## 3. Turn on Developer Mode on the TV
 
@@ -181,6 +179,24 @@ When you're done:
    hold OK (or press Down), and choose **Add to Home**.
 
 **To update later:** reconnect the TV (steps 2 and 4), then run `./deploy.sh <tv-ip>` again.
+
+## Back to home Wi-Fi (do this every time you used the hotspot)
+
+The fixed address from step 2 applies to **every** Wi-Fi network, so until you undo it the
+Mac won't connect to your home Wi-Fi, even though your other devices do.
+
+1. In a regular Terminal window (`sudo` asks for your Mac password), run:
+   ```
+   sudo networksetup -setdhcp Wi-Fi
+   ```
+   Or use System Settings: **Wi-Fi** → **Details…** next to the network → **TCP/IP** →
+   **Configure IPv4: Using DHCP** → **OK**.
+2. Reconnect: click the Wi-Fi icon in the menu bar and pick your home network. If it's
+   already selected, turn Wi-Fi off and on.
+3. Check it worked: `networksetup -getinfo Wi-Fi` should say **DHCP Configuration** and show
+   your home address, not `172.20.10.5`.
+4. **TV:** Settings → General & Privacy → Network → Open Network Settings → Wireless → pick
+   your home network. The apps keep working. Developer Mode can stay on.
 
 ## Using it
 
