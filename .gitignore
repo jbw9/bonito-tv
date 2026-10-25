@@ -1,0 +1,9 @@
+.env
+build/
+dist/
+.DS_Store
+# Personal: local settings, notes and the Heartive build.
+app/config.local.js
+INSTRUCTIONS.md
+deploy-heartive.sh
+heartive/
