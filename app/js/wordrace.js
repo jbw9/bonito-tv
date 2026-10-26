@@ -9,14 +9,14 @@ const WordleRace = (() => {
   const party = makeParty('WORDLE RACE', 4);
 
   // Each of party.players also gets words, rows (marks as 'c'/'p'/'a' strings), solved,
-  // at (seconds taken when done), miss (rejected guesses, so phones can tell) and next (CPU).
+  // gaveUp, at (seconds taken when done), miss (rejected guesses, so phones can tell) and next (CPU).
   let mode = 'lobby', answer, timer, round = 0, winner, overTimer;
 
   function startRound() {
     if (!party.begin()) return;
     const n = Math.floor(Math.random() * WORDLE_ANSWERS.length / 5);
     answer = WORDLE_ANSWERS.substr(n * 5, 5);
-    party.players.forEach(p => Object.assign(p, { words: [], rows: [], solved: false, at: null, miss: 0, next: 6 + Math.random() * 8 }));
+    party.players.forEach(p => Object.assign(p, { words: [], rows: [], solved: false, gaveUp: false, at: null, miss: 0, next: 6 + Math.random() * 8 }));
     round++;
     timer = TIME;
     mode = 'play';
@@ -27,7 +27,7 @@ const WordleRace = (() => {
     party.toLobby();
   }
 
-  const done = p => p.solved || p.rows.length === 6;
+  const done = p => p.solved || p.gaveUp || p.rows.length === 6;
 
   function guess(p, word) {
     word = String(word || '').toUpperCase();
@@ -37,6 +37,12 @@ const WordleRace = (() => {
     p.rows.push(wordleMarks(answer, word).map(m => CODE[m]).join(''));
     if (word === answer) p.solved = true;
     if (done(p)) p.at = TIME - timer;
+  }
+
+  function giveUp(p) {
+    if (mode !== 'play' || !p || done(p)) return;
+    p.gaveUp = true;
+    p.at = TIME - timer;
   }
 
   // The CPU really plays: each guess is an answer that fits everything it's seen so far.
@@ -104,6 +110,7 @@ const WordleRace = (() => {
       drawText(g, p.name, cx, 290, 5, p.color, { style: 'thin', align: 'center' });
       const bottom = drawGrid(g, p, cx, 350, size);
       const status = p.solved ? 'GOT IT IN ' + p.rows.length + '  ' + clockText(p.at)
+        : p.gaveUp ? 'GAVE UP'
         : p.rows.length === 6 ? 'OUT OF GUESSES'
         : mode === 'over' ? 'TIME UP' : p.rows.length + ' OF 6';
       drawText(g, status, cx, bottom + 34, 3.5, p.solved ? '#5cff9d' : '#9aa0a8', { style: 'thin', align: 'center' });
@@ -152,14 +159,16 @@ const WordleRace = (() => {
   }
 
   function phone(event, p) {
-    if (!party.phone(event, p, startRound) && event === 'guess') guess(party.find(p.id), p.word);
+    if (party.phone(event, p, startRound)) return;
+    if (event === 'guess') guess(party.find(p.id), p.word);
+    else if (event === 'giveup') giveUp(party.find(p.id));
   }
 
   // Everyone's colours but not their letters (each phone keeps its own), and the word
   // only once it's over.
   function phoneState() {
     const playing = mode !== 'lobby';
-    return Object.assign(party.state(mode, p => (playing ? { rows: p.rows, solved: p.solved, miss: p.miss } : {})), {
+    return Object.assign(party.state(mode, p => (playing ? { rows: p.rows, solved: p.solved, gaveUp: p.gaveUp, miss: p.miss } : {})), {
       round,
       left: mode === 'play' ? Math.ceil(timer) : null,
       word: mode === 'over' ? answer : null,
@@ -223,6 +232,7 @@ App.screens.wordle = (() => {
     if (mode === 'pick') {
       if (event === 'pick' && (p.mode === 'solo' || p.mode === 'race')) pick(p.mode);
     } else if (mode === 'race') WordleRace.phone(event, p);
+    else if (event === 'giveup') WordleSolo.giveUp();
   }
 
   return {

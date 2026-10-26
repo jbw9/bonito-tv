@@ -100,6 +100,13 @@ const WordleSolo = (() => {
     } else say('');
   }
 
+  function giveUp() {
+    if (done) return;
+    finish(false);
+    typed = '';
+    say('THE WORD WAS ' + answer);
+  }
+
   // One letter, DEL or ENTER, from either keyboard.
   function press(k) {
     if (done) return k === 'ENTER' && newGame();
@@ -207,5 +214,5 @@ const WordleSolo = (() => {
     return { words: guesses, rows: marks.map(m => m.map(x => code[x]).join('')), typed, done: !!done, msg: msg && clock < msgUntil ? msg : '' };
   }
 
-  return { enter, update, draw, key, type, phoneState };
+  return { enter, update, draw, key, type, giveUp, phoneState };
 })();

@@ -75,6 +75,25 @@
     .chips { display: flex; gap: 8px; margin: 18px 0 2px; overflow-x: auto; scrollbar-width: none; }
     .chip { flex: none; height: 32px; padding: 0 14px; border-radius: 999px; background: var(--highlight); font-size: 14px; font-weight: 500; }
 
+    #library { scroll-margin-top: 150px; }
+    .shelf { display: flex; gap: 14px; margin: 0 -16px; padding: 0 16px; overflow-x: auto; scrollbar-width: none; }
+    .shelf::-webkit-scrollbar { display: none; }
+    .card { flex: none; width: 140px; text-align: left; }
+    .card img, .card .art { display: block; width: 140px; height: 140px; border-radius: 6px; object-fit: cover; background: var(--highlight); }
+    .card.round { width: 120px; text-align: center; }
+    .card.round img, .card.round .art { width: 120px; height: 120px; border-radius: 50%; }
+    .card .name, .card .sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .card .name { margin-top: 8px; font-size: 14px; font-weight: 700; }
+    .card .sub { color: var(--sub); font-size: 13px; }
+    .liked { display: grid !important; place-items: center; background: linear-gradient(135deg, #450af5, #8e8ee5 60%, #c4efd9) !important; color: #fff; }
+    .more { margin-top: 8px; height: 32px; padding: 0 14px; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--dim); font-size: 13px; font-weight: 700; }
+    .back { width: 40px; height: 40px; margin: 4px 0 0 -8px; display: grid; place-items: center; }
+    .cover { display: block; width: min(56vw, 230px); aspect-ratio: 1; height: auto; margin: 4px auto 0; border-radius: 4px; object-fit: cover; background: var(--highlight); box-shadow: 0 8px 32px rgba(0,0,0,.55); }
+    .list-title { margin-top: 20px; font-size: 24px; font-weight: 800; letter-spacing: -.01em; }
+    .list-bar { display: flex; align-items: center; justify-content: space-between; min-height: 56px; margin: 4px 0 8px; color: var(--sub); font-size: 14px; }
+    .play-all { width: 56px; height: 56px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--green); color: #000; }
+    .play-all:active { transform: scale(.94); }
+
     h2 { margin: 26px 0 8px; font-size: 18px; font-weight: 700; }
     h2 small { display: block; color: var(--sub); font-size: 13px; font-weight: 500; margin-top: 2px; }
     ul { list-style: none; margin: 0; padding: 0; }
@@ -180,6 +199,9 @@
     .wkeys button.c { background: #538d4e; }
     .wkeys button.p { background: #b59f3b; }
     .wkeys button.a { background: #3a3a3c; }
+    .giveup { display: block; margin: 14px auto 0; padding: 10px 22px; border-radius: 999px; background: none; color: var(--sub); font-size: 14px; font-weight: 700; box-shadow: inset 0 0 0 1px #3e3e3e; }
+    .giveup[hidden] { display: none; }
+    .giveup.sure { color: #fff; background: var(--red); box-shadow: none; }
     .race-msg { min-height: 18px; text-align: center; color: var(--sub); font-size: 14px; font-weight: 700; margin-top: 12px; }
     .hint { text-align: center; color: var(--dim); font-size: 13px; margin-top: 18px; }
 
@@ -233,8 +255,10 @@
       <div id="now"></div>
       <div id="chips" class="chips"></div>
       <div id="queue"></div>
+      <div id="library"></div>
     </div>
     <div id="results" hidden></div>
+    <div id="list" hidden></div>
     </section>
   </main>
   <div id="mini" hidden></div>
@@ -269,8 +293,14 @@
       chevron: '<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6"/></svg>',
       go: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>',
       handle: '<svg width="20" height="20" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 8h16M4 12h16M4 16h16"/></svg>',
+      back: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5-7 7 7 7"/></svg>',
+      heart: '<svg width="44%" height="44%" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>',
     };
+    // A share link from the Spotify app: a song is looked up, an album or playlist opened.
+    const LINK = /(track|album|playlist)[/:]([A-Za-z0-9]{22})/;
     let state = null, lastJson = '', searchSeq = 0, debounce = null, toastTimer = null, gesture = false, pendingEdits = 0;
+    let library = null, libraryAsked = 0, browsing = null;
+    const addedUris = new Set();
     const tints = {};
 
     function el(tag, cls, text) {
@@ -364,7 +394,7 @@
     // Straight to Spotify when the TV has shared a token, otherwise through the TV.
     function search(q) {
       const token = searchToken();
-      if (!token) return request({ kind: 'search', query: q });
+      if (!token || LINK.test(q)) return request({ kind: 'search', query: q });
       return fetch('https://api.spotify.com/v1/search?type=track&limit=10&q=' + encodeURIComponent(q), { headers: { Authorization: 'Bearer ' + token } })
         .then(r => {
           if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -379,18 +409,28 @@
         .catch(() => request({ kind: 'search', query: q }));
     }
 
+    // Remembered by song, so a list drawn again still shows what's been added.
+    function markAdded(btn) {
+      btn.innerHTML = ICON.added;
+      btn.classList.add('added');
+      btn.onclick = null;
+    }
+
     function addButton(t) {
       const btn = el('button', 'icon-btn');
       btn.innerHTML = ICON.add;
       btn.setAttribute('aria-label', 'Add to queue');
+      if (addedUris.has(t.uri)) {
+        markAdded(btn);
+        return btn;
+      }
       btn.onclick = () => {
         btn.disabled = true;
         request({ kind: 'add', query: t.uri, name: $('name').value.trim().slice(0, 24) || null, title: (t.name + ' - ' + t.artist).slice(0, 200) })
           .then(() => {
             btn.disabled = false;
-            btn.innerHTML = ICON.added;
-            btn.classList.add('added');
-            btn.onclick = null;
+            addedUris.add(t.uri);
+            markAdded(btn);
             toast('Added to queue');
             setTimeout(loadState, 1200);
           }, err => {
@@ -428,11 +468,15 @@
 
     // Results follow what's typed; only the latest search is shown.
     function onQuery(immediate) {
-      const q = $('query').value.trim();
+      let q = $('query').value.trim();
+      const link = LINK.exec(q);
+      if (link && link[1] !== 'track') {
+        $('query').value = q = '';
+        $('query').blur();
+        openList({ id: (link[1] === 'album' ? 'album:' : '') + link[2] });
+      }
       $('clear').style.display = q ? 'block' : 'none';
-      $('home').hidden = !!q;
-      $('results').hidden = !q;
-      renderMini();
+      showView();
       clearTimeout(debounce);
       if (!q) return;
       const seq = ++searchSeq;
@@ -688,14 +732,171 @@
     function renderChips() {
       const box = $('chips');
       box.textContent = '';
-      const now = state && state.now;
-      if (!now || !now.artist) return;
-      const chip = el('button', 'chip', 'More from ' + now.artist);
-      chip.onclick = () => {
-        $('query').value = now.artist;
-        onQuery(true);
+      const chip = (label, onclick) => {
+        const c = el('button', 'chip', label);
+        c.onclick = onclick;
+        box.append(c);
       };
-      box.append(chip);
+      if (library) {
+        const liked = library.lists.find(p => p.id === 'liked');
+        if (library.lists.length) chip('Playlists', () => $('library').scrollIntoView({ behavior: 'smooth' }));
+        if (liked) chip('Liked Songs', () => openList(playlist(liked)));
+        if (library.recent.length) chip('Recently played', () => openList({ name: 'Recently played', tracks: library.recent }));
+        if (library.top.length) chip('Your top songs', () => openList({ name: 'Your top songs', sub: 'This month', tracks: library.top }));
+      }
+      const now = state && state.now;
+      if (now && now.artist) chip('More from ' + now.artist, () => searchFor(now.artist));
+    }
+
+    function searchFor(q) {
+      $('query').value = q;
+      onQuery(true);
+    }
+
+    // ---- Library: the host's own music, browsed through the TV ---------------
+
+    function loadLibrary() {
+      if (library || !tvOn() || Date.now() - libraryAsked < 30000) return;
+      libraryAsked = Date.now();
+      request({ kind: 'edit', query: JSON.stringify({ op: 'library' }) }).then(res => {
+        library = res;
+        renderChips();
+        renderLibrary();
+      }, () => {});
+    }
+
+    function likedArt(cls) {
+      const e = el('div', (cls || 'art') + ' liked');
+      e.innerHTML = ICON.heart;
+      return e;
+    }
+
+    function playlist(p) {
+      const songs = p.count != null ? p.count + (p.count === 1 ? ' song' : ' songs') : '';
+      return p.id === 'liked'
+        ? { id: 'liked', liked: true, name: p.name, sub: songs }
+        : { id: p.id, name: p.name, image: p.image, uri: 'spotify:playlist:' + p.id, sub: songs };
+    }
+
+    function card(cls, image, name, sub, onclick) {
+      const c = el('button', 'card' + cls);
+      const a = image === 'liked' ? likedArt() : art(image);
+      if (a.tagName === 'IMG') a.loading = 'lazy';
+      c.append(a, el('div', 'name', name));
+      if (sub) c.append(el('div', 'sub', sub));
+      c.onclick = onclick;
+      return c;
+    }
+
+    function renderLibrary() {
+      const box = $('library');
+      box.textContent = '';
+      if (!library) return;
+      if (library.lists.length) {
+        const shelf = el('div', 'shelf');
+        library.lists.forEach(p => {
+          const list = playlist(p);
+          shelf.append(card('', p.id === 'liked' ? 'liked' : p.image, p.name, list.sub, () => openList(list)));
+        });
+        box.append(el('h2', null, 'Your playlists'), shelf);
+      }
+      [['Jump back in', 'Recently played', library.recent], ['Your top songs', 'This month', library.top]].forEach(([title, sub, tracks]) => {
+        if (!tracks.length) return;
+        const h = el('h2', null, title);
+        h.append(el('small', null, sub));
+        const ul = el('ul');
+        tracks.slice(0, 5).forEach(t => ul.append(resultRow(t)));
+        box.append(h, ul);
+        if (tracks.length > 5) {
+          const more = el('button', 'more', 'Show all');
+          more.onclick = () => openList({ name: title, sub, tracks });
+          box.append(more);
+        }
+      });
+      if (library.artists.length) {
+        const shelf = el('div', 'shelf');
+        library.artists.forEach(a => shelf.append(card(' round', a.image, a.name, null, () => searchFor(a.name))));
+        box.append(el('h2', null, 'Your top artists'), shelf);
+      }
+    }
+
+    // A playlist, Liked Songs or album fills the page, a page of songs at a time; lists
+    // already on the phone (recently played, top songs) show straight away. The
+    // phone's back gesture closes it.
+    function openList(list) {
+      if (!browsing) history.pushState({ list: true }, '');
+      browsing = list;
+      renderList();
+      showView();
+      window.scrollTo(0, 0);
+      if (!list.tracks) loadMore();
+    }
+
+    function loadMore() {
+      const v = browsing;
+      v.loading = true;
+      renderList();
+      request({ kind: 'edit', query: JSON.stringify({ op: 'list', id: v.id, offset: v.next || 0 }) })
+        .then(res => {
+          ['name', 'image', 'uri', 'sub'].forEach(k => { v[k] = v[k] || res[k]; });
+          v.tracks = (v.tracks || []).concat(res.tracks);
+          v.next = res.next;
+        }, err => { v.error = err.message; })
+        .then(() => {
+          v.loading = false;
+          if (browsing === v) renderList();
+        });
+    }
+
+    function renderList() {
+      const box = $('list'), v = browsing;
+      box.textContent = '';
+      if (!v) return;
+      const back = button('back', 'Back', () => history.back());
+      back.innerHTML = ICON.back;
+      box.append(back);
+      if (v.liked) box.append(likedArt('cover'));
+      else if (v.image) box.append(art(v.image, 'cover'));
+      box.append(el('div', 'list-title', v.name || ''));
+      const bar = el('div', 'list-bar');
+      bar.append(el('span', null, v.sub || ''));
+      if (v.uri) {
+        const play = button('play-all', 'Play on the TV', () => {
+          edit({ op: 'context', uri: v.uri });
+          toast('Playing ' + v.name + ' on the TV');
+        });
+        play.innerHTML = ICON.play;
+        bar.append(play);
+      }
+      box.append(bar);
+      if (v.tracks && v.tracks.length) {
+        const ul = el('ul');
+        v.tracks.forEach(t => ul.append(resultRow(t)));
+        box.append(ul);
+      }
+      if (v.error) box.append(el('div', 'note', v.error));
+      else if (v.loading) box.append(skeleton());
+      else if (v.next) {
+        const more = el('button', 'more', 'Show more');
+        more.onclick = loadMore;
+        box.append(more);
+      } else if (v.tracks && !v.tracks.length) box.append(el('div', 'note', 'No songs here'));
+    }
+
+    window.addEventListener('popstate', () => {
+      if (!browsing) return;
+      browsing = null;
+      renderList();
+      showView();
+    });
+
+    // Search results cover everything; an open list covers the home view.
+    function showView() {
+      const q = $('query').value.trim();
+      $('results').hidden = !q;
+      $('list').hidden = !!q || !browsing;
+      $('home').hidden = !!q || !!browsing;
+      renderMini();
     }
 
     function renderQueue() {
@@ -718,7 +919,7 @@
 
     function renderMini() {
       const mini = $('mini'), now = state && state.now;
-      mini.hidden = !now || $('results').hidden || tab !== 'spotify';
+      mini.hidden = !now || !$('home').hidden || tab !== 'spotify';
       if (mini.hidden) return;
       mini.textContent = '';
       const meta = el('div', 'meta');
@@ -755,6 +956,7 @@
           }
           renderDevice();
           renderPlayback();
+          loadLibrary();
           if (json === lastJson || gesture) return;
           lastJson = json;
           state = res;
@@ -1022,7 +1224,25 @@
       });
       wordKeys.append(line);
     });
-    $('game-word').append(wordMsg, wordGrid, wordKeys);
+    // Two taps, so a stray one doesn't end the game.
+    let sureTimer = null;
+    const giveUpBtn = button('giveup', 'Give up', () => {
+      if (!giveUpBtn.classList.contains('sure')) {
+        giveUpBtn.classList.add('sure');
+        giveUpBtn.textContent = 'Tap again to give up';
+        sureTimer = setTimeout(resetGiveUp, 3000);
+        return;
+      }
+      resetGiveUp();
+      send('giveup', { id: ME });
+    });
+    function resetGiveUp() {
+      clearTimeout(sureTimer);
+      giveUpBtn.classList.remove('sure');
+      giveUpBtn.textContent = 'Give up';
+    }
+    resetGiveUp();
+    $('game-word').append(wordMsg, wordGrid, wordKeys, giveUpBtn);
 
     function wordKey(k) {
       const state = wordState;
@@ -1070,7 +1290,8 @@
       const solo = state.mode === 'solo', me = mySeat();
       if (!solo && !me) return;
       const rows = (solo ? state.rows : me.rows) || [], words = solo ? state.words : race.words;
-      const finished = solo ? !!state.done : me.solved || rows.length === 6;
+      const finished = solo ? !!state.done : me.solved || me.gaveUp || rows.length === 6;
+      giveUpBtn.hidden = finished || (!solo && state.mode !== 'play');
       const draft = solo ? state.typed : race.pending || race.draft;
       wordGrid.textContent = '';
       for (let r = 0; r < 6; r++) {
@@ -1086,7 +1307,7 @@
       const winner = state.players.find(p => p.id === state.winner);
       wordMsg.textContent = state.mode === 'over' ? 'The word was ' + state.word + ' · ' + (winner ? (winner.id === ME ? 'You win!' : winner.name + ' wins') : 'Nobody got it')
         : state.mode !== 'play' ? ''
-        : race.msg || (me.solved ? 'Got it in ' + rows.length + '! ' : finished ? 'Out of guesses. ' : '') + clock(state.left) + ' left';
+        : race.msg || (me.solved ? 'Got it in ' + rows.length + '! ' : me.gaveUp ? 'You gave up. ' : finished ? 'Out of guesses. ' : '') + clock(state.left) + ' left';
     }
 
     // Built once and only shown or hidden, so a finger on it never loses its button.
