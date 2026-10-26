@@ -152,51 +152,37 @@ const Jam = (() => {
       .then(() => answer(row.id, { ok: true }));
   }
 
-  // Guests browse the account's own music, like Spotify's home screen. Spotify gives
-  // apps none of its own mixes or recommendations, so these are the closest it allows.
-  // Kept for a few minutes, since every phone asks when it opens the page.
-  let shelves = null;
-  function library() {
-    if (shelves && Date.now() - shelves.at < 5 * 60e3) return Promise.resolve(shelves);
-    // A shelf the login has no permission for (a login from before these were asked
-    // for) is left out.
-    const get = path => Music.api('GET', path).catch(() => null);
-    return Promise.all([
-      get('/me'),
-      get('/me/player/recently-played?limit=50'),
-      get('/me/top/tracks?limit=20&time_range=short_term'),
-      get('/me/top/artists?limit=12&time_range=short_term'),
-      get('/me/tracks?limit=1'),
-      get('/me/playlists?limit=50'),
-    ]).then(([me, recent, top, artists, liked, lists]) => {
-      const seen = {};
-      shelves = {
-        at: Date.now(),
-        recent: recent ? recent.items.map(i => trackInfo(i.track)).filter(t => !seen[t.uri] && (seen[t.uri] = true)).slice(0, 20) : [],
-        top: top ? top.items.map(t => trackInfo(t)) : [],
-        artists: artists ? artists.items.map(a => ({ name: a.name, image: (a.images[1] || a.images[0] || {}).url })) : [],
-        // Only playlists the account owns or collaborates on: Spotify won't share the
-        // songs of any other.
-        lists: (liked && liked.total ? [{ id: 'liked', name: 'Liked Songs', count: liked.total }] : []).concat(me && lists
-          ? lists.items.filter(p => p && (p.owner.id === me.id || p.collaborative)).map(p => ({
-            id: p.id, name: p.name, image: ((p.images || [])[0] || {}).url, count: (p.items || p.tracks || {}).total,
-          }))
-          : []),
-      };
-      return shelves;
-    });
+  // Top songs for guests to pick from. Spotify gives apps none of its charts, nor the
+  // songs in its own playlists, so this is Apple Music's most-played chart with each
+  // song found on Spotify. Built in the background every few hours so phones get it
+  // straight away. Apple's feed now and then answers 504, so a miss is retried soon.
+  const CHART = 'https://rss.marketingtools.apple.com/api/v2/us/music/most-played/30/songs.json';
+  let chart = [], chartAt = 0;
+  function refreshChart() {
+    if (Date.now() - chartAt < (chart.length ? 6 * 3600e3 : 60e3)) return;
+    chartAt = Date.now();
+    fetch(CHART)
+      .then(r => {
+        if (!r.ok) throw new Error('chart HTTP ' + r.status);
+        return r.json();
+      })
+      .then(d => d.feed.results.reduce((done, s) => done.then(found => {
+        // "(feat. X)" and the like throw Spotify's search off.
+        const q = s.name.replace(/\s*[([].*?[)\]]/g, '') + ' ' + s.artistName.split(/,| & /)[0];
+        return Music.api('GET', '/search?type=track&limit=1&q=' + encodeURIComponent(q))
+          .then(r => r.tracks.items[0] ? found.concat(trackInfo(r.tracks.items[0])) : found, () => found);
+      }), Promise.resolve([])))
+      .then(tracks => { if (tracks.length) chart = tracks; })
+      .catch(err => console.error('jam chart', err.message));
   }
 
-  // One page of Liked Songs, a playlist, or an album (from a guest's pasted link).
+  // One page of a playlist or album, from a guest's pasted link.
   function listPage(op) {
     const offset = Math.max(0, op.offset | 0), m = /^(album:)?([A-Za-z0-9]{22})$/.exec(op.id);
     const page = (items, more, info) => Object.assign({
       tracks: items.filter(t => t && t.type === 'track' && !t.is_local).map(t => trackInfo(t)),
       next: more ? offset + 50 : null,
     }, info);
-    if (op.id === 'liked') {
-      return Music.api('GET', '/me/tracks?limit=50&offset=' + offset).then(d => page(d.items.map(i => i.track), d.next));
-    }
     if (!m) return Promise.reject(new Error('Unknown list'));
     if (m[1]) {
       return Music.api('GET', '/albums/' + m[2]).then(a => page(a.tracks.items.map(t => Object.assign(t, { album: a })), false,
@@ -211,7 +197,7 @@ const Jam = (() => {
       p && { name: p.name, image: ((p.images || [])[0] || {}).url, uri: p.uri, sub: 'Playlist' }));
   }
 
-  const BROWSE = { library, list: listPage };
+  const BROWSE = { top: () => Promise.resolve({ tracks: chart }), list: listPage };
 
   // A song's share link from the Spotify app finds that song.
   function find(q) {
@@ -252,6 +238,7 @@ const Jam = (() => {
   function tick() {
     if (ticking || document.hidden) return;
     ticking = true;
+    refreshChart();
     if (CONFIG.spotifyClientSecret && (!search || search.expires - Date.now() < 10 * 60e3)) {
       Music.catalogToken().then(t => { search = t; }, err => console.error('jam search token', err.message));
     }

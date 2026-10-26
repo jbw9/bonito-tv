@@ -75,25 +75,13 @@
     .chips { display: flex; gap: 8px; margin: 18px 0 2px; overflow-x: auto; scrollbar-width: none; }
     .chip { flex: none; height: 32px; padding: 0 14px; border-radius: 999px; background: var(--highlight); font-size: 14px; font-weight: 500; }
 
-    .chip.on { background: var(--green); color: #000; }
-    #library { scroll-margin-top: 150px; }
-    .login { margin-top: 14px; padding: 20px; border-radius: 8px; background: var(--highlight); }
-    .login b { display: block; font-size: 18px; margin-bottom: 4px; }
-    .login p { margin: 0 0 16px; color: var(--sub); font-size: 14px; }
-    .login .error { color: #f3727f; }
-    .login .pill { background: var(--green); color: #000; }
-    .login .fallback { margin: 14px 0 0; font-size: 13px; }
-    .logout { display: block; margin: 24px auto 0; color: var(--sub); font-size: 13px; font-weight: 700; }
+    #playlists { scroll-margin-top: 150px; }
     .shelf { display: flex; gap: 14px; margin: 0 -16px; padding: 0 16px; overflow-x: auto; scrollbar-width: none; }
     .shelf::-webkit-scrollbar { display: none; }
     .card { flex: none; width: 140px; text-align: left; }
     .card img, .card .art { display: block; width: 140px; height: 140px; border-radius: 6px; object-fit: cover; background: var(--highlight); }
-    .card.round { width: 120px; text-align: center; }
-    .card.round img, .card.round .art { width: 120px; height: 120px; border-radius: 50%; }
-    .card .name, .card .sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .card .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .card .name { margin-top: 8px; font-size: 14px; font-weight: 700; }
-    .card .sub { color: var(--sub); font-size: 13px; }
-    .liked { display: grid !important; place-items: center; background: linear-gradient(135deg, #450af5, #8e8ee5 60%, #c4efd9) !important; color: #fff; }
     .more { margin-top: 8px; height: 32px; padding: 0 14px; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--dim); font-size: 13px; font-weight: 700; }
     .back { width: 40px; height: 40px; margin: 4px 0 0 -8px; display: grid; place-items: center; }
     .cover { display: block; width: min(56vw, 230px); aspect-ratio: 1; height: auto; margin: 4px auto 0; border-radius: 4px; object-fit: cover; background: var(--highlight); box-shadow: 0 8px 32px rgba(0,0,0,.55); }
@@ -302,18 +290,11 @@
       go: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>',
       handle: '<svg width="20" height="20" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 8h16M4 12h16M4 16h16"/></svg>',
       back: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5-7 7 7 7"/></svg>',
-      heart: '<svg width="44%" height="44%" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>',
     };
     // A share link from the Spotify app: a song is looked up, an album or playlist opened.
     const LINK = /(track|album|playlist)[/:]([A-Za-z0-9]{22})/;
     let state = null, lastJson = '', searchSeq = 0, debounce = null, toastTimer = null, gesture = false, pendingEdits = 0;
-    let library = null, libraryAsked = 0, browsing = null;
-    // The guest's own Spotify, read straight from the phone (see "Guest's own Spotify").
-    let guest = null, mine = null, mineError = null, mineLoading = false, source = 'host';
-    try {
-      guest = JSON.parse(localStorage.getItem('jam-spotify'));
-      source = localStorage.getItem('jam-source') || 'host';
-    } catch (e) {}
+    let topSongs = null, topAsked = 0, browsing = null;
     const addedUris = new Set();
     const tints = {};
 
@@ -414,17 +395,13 @@
           if (!r.ok) throw new Error('HTTP ' + r.status);
           return r.json();
         })
-        .then(d => d.tracks.items.map(trackInfo))
+        .then(d => d.tracks.items.map(t => ({
+          uri: t.uri,
+          name: t.name,
+          artist: t.artists[0].name,
+          image: (t.album.images[t.album.images.length - 1] || {}).url,
+        })))
         .catch(() => request({ kind: 'search', query: q }));
-    }
-
-    function trackInfo(t) {
-      return {
-        uri: t.uri,
-        name: t.name,
-        artist: t.artists[0].name,
-        image: (t.album.images[t.album.images.length - 1] || {}).url,
-      };
     }
 
     // Remembered by song, so a list drawn again still shows what's been added.
@@ -747,11 +724,6 @@
       control({ op: state.playback.playing ? 'pause' : 'play' });
     }
 
-    // The library on show: the host's (through the TV) or the guest's own.
-    function shown() {
-      return source === 'mine' ? mine : library;
-    }
-
     function renderChips() {
       const box = $('chips');
       box.textContent = '';
@@ -760,14 +732,8 @@
         c.onclick = onclick;
         box.append(c);
       };
-      const lib = shown();
-      if (lib) {
-        const liked = lib.lists.find(p => p.id === 'liked');
-        if (lib.lists.length) chip('Playlists', () => $('library').scrollIntoView({ behavior: 'smooth' }));
-        if (liked) chip('Liked Songs', () => openList(playlist(liked)));
-        if (lib.recent.length) chip('Recently played', () => openList({ name: 'Recently played', tracks: lib.recent }));
-        if (lib.top.length) chip('Top songs', () => openList({ name: 'Top songs', sub: 'This month', tracks: lib.top }));
-      }
+      if (topSongs) chip('Top songs', () => openList({ name: 'Top songs', sub: TOP_SUB, tracks: topSongs }));
+      chip('Playlists', () => $('playlists').scrollIntoView({ behavior: 'smooth' }));
       const now = state && state.now;
       if (now && now.artist) chip('More from ' + now.artist, () => searchFor(now.artist));
     }
@@ -777,245 +743,84 @@
       onQuery(true);
     }
 
-    // ---- Library: the host's music through the TV, or the guest's own --------
+    // ---- Browse: top songs and Spotify's own playlists ---------------------------
 
-    function loadLibrary() {
-      if (library || !tvOn() || Date.now() - libraryAsked < 30000) return;
-      libraryAsked = Date.now();
-      request({ kind: 'edit', query: JSON.stringify({ op: 'library' }) }).then(res => {
-        library = res;
+    const TOP_SUB = 'Most played in the US right now';
+    // Spotify doesn't let apps list the songs in its own playlists, so these are played
+    // whole on the TV. Covers come from Spotify's public oEmbed, so they stay current.
+    const PLAYLISTS = [
+      ['Party', [['37i9dQZF1DXaXB8fQg7xif', 'Dance Party'], ['37i9dQZF1DX0BcQWzuB7ZO', 'Dance Hits'], ['37i9dQZF1DXcBWIGoYBM5M', "Today's Top Hits"], ['37i9dQZF1DXdPec7aLTmlC', 'Happy Hits!'], ['37i9dQZF1DX3rxVfibe1L0', 'Mood Booster'], ['37i9dQZF1DWWMOmoXKqHTD', 'Songs to Sing in the Car']]],
+      ['Throwbacks', [['37i9dQZF1DX4o1oenSJRJd', 'All Out 2000s'], ['37i9dQZF1DX5Ejj0EkURtP', 'All Out 2010s'], ['37i9dQZF1DXbTxeAdrVG2l', 'All Out 90s'], ['37i9dQZF1DX4UtSsGT1Sbe', 'All Out 80s'], ['37i9dQZF1DWXRqgorJj26U', 'Rock Classics']]],
+      ['Chill', [['37i9dQZF1DX4WYpdgoIcn6', 'Chill Hits'], ['37i9dQZF1DWWQRwui0ExPn', 'lofi beats'], ['37i9dQZF1DX4sWSpwq3LiO', 'Peaceful Piano'], ['37i9dQZF1DWZeKCadgRdKQ', 'Deep Focus']]],
+      ['Charts and genres', [['37i9dQZEVXbLRQDuF5jeBp', 'Top 50 USA'], ['37i9dQZEVXbMDoHDwVN2tF', 'Top 50 Global'], ['37i9dQZF1DX0XUsuxWHRQd', 'RapCaviar'], ['37i9dQZF1DX10zKzsJ2jva', 'Viva Latino'], ['37i9dQZF1DX1lVhptIYRda', 'Hot Country']]],
+    ];
+    const covers = {};
+
+    function loadTop() {
+      if (topSongs || !tvOn() || Date.now() - topAsked < 30000) return;
+      topAsked = Date.now();
+      request({ kind: 'edit', query: JSON.stringify({ op: 'top' }) }).then(res => {
+        if (!res.tracks.length) return;
+        topSongs = res.tracks;
         renderChips();
         renderLibrary();
       }, () => {});
     }
 
-    function likedArt(cls) {
-      const e = el('div', (cls || 'art') + ' liked');
-      e.innerHTML = ICON.heart;
+    function coverArt(id, cls) {
+      const e = art(covers[id], cls);
+      if (!covers[id]) {
+        fetch('https://open.spotify.com/oembed?url=https://open.spotify.com/playlist/' + id)
+          .then(r => r.json())
+          .then(d => {
+            covers[id] = d.thumbnail_url;
+            e.replaceWith(art(covers[id], cls));
+          })
+          .catch(() => {});
+      }
       return e;
     }
 
-    function playlist(p) {
-      const songs = p.count != null ? p.count + (p.count === 1 ? ' song' : ' songs') : '';
-      const list = p.id === 'liked'
-        ? { id: 'liked', liked: true, name: p.name, sub: songs }
-        : { id: p.id, name: p.name, image: p.image, uri: 'spotify:playlist:' + p.id, sub: songs };
-      list.mine = source === 'mine';
-      return list;
-    }
-
-    function card(cls, image, name, sub, onclick) {
-      const c = el('button', 'card' + cls);
-      const a = image === 'liked' ? likedArt() : art(image);
-      if (a.tagName === 'IMG') a.loading = 'lazy';
-      c.append(a, el('div', 'name', name));
-      if (sub) c.append(el('div', 'sub', sub));
+    function card(cover, name, onclick) {
+      const c = el('button', 'card');
+      c.append(cover, el('div', 'name', name));
       c.onclick = onclick;
       return c;
-    }
-
-    function setSource(to) {
-      source = to;
-      try { localStorage.setItem('jam-source', to); } catch (e) {}
-      if (to === 'mine') loadMine();
-      renderChips();
-      renderLibrary();
     }
 
     function renderLibrary() {
       const box = $('library');
       box.textContent = '';
-      const tabs = el('div', 'chips');
-      [['host', "Host's music"], ['mine', 'Your music']].forEach(([key, label]) => {
-        const c = el('button', 'chip' + (source === key ? ' on' : ''), label);
-        c.onclick = () => setSource(key);
-        tabs.append(c);
-      });
-      box.append(el('h2', null, 'Browse'), tabs);
-      const lib = shown();
-      if (source === 'mine' && !guest) return box.append(loginCard());
-      if (!lib) {
-        if (source === 'mine' && mineError) return box.append(loginCard());
-        return box.append(source === 'host' && !tvOn() ? el('div', 'note', "Open the launcher on the TV to see the host's music.") : skeleton());
-      }
-      if (lib.lists.length) {
-        const shelf = el('div', 'shelf');
-        lib.lists.forEach(p => {
-          const list = playlist(p);
-          shelf.append(card('', p.id === 'liked' ? 'liked' : p.image, p.name, list.sub, () => openList(list)));
-        });
-        box.append(el('h2', null, 'Playlists'), shelf);
-      }
-      [['Jump back in', 'Recently played', lib.recent], ['Top songs', 'This month', lib.top]].forEach(([title, sub, tracks]) => {
-        if (!tracks.length) return;
-        const h = el('h2', null, title);
-        h.append(el('small', null, sub));
+      if (topSongs) {
+        const h = el('h2', null, 'Top songs');
+        h.append(el('small', null, TOP_SUB));
         const ul = el('ul');
-        tracks.slice(0, 5).forEach(t => ul.append(resultRow(t)));
-        box.append(h, ul);
-        if (tracks.length > 5) {
-          const more = el('button', 'more', 'Show all');
-          more.onclick = () => openList({ name: title, sub, tracks });
-          box.append(more);
-        }
-      });
-      if (lib.artists.length) {
+        topSongs.slice(0, 5).forEach(t => ul.append(resultRow(t)));
+        const more = el('button', 'more', 'Show all');
+        more.onclick = () => openList({ name: 'Top songs', sub: TOP_SUB, tracks: topSongs });
+        box.append(h, ul, more);
+      }
+      PLAYLISTS.forEach(([title, lists], i) => {
         const shelf = el('div', 'shelf');
-        lib.artists.forEach(a => shelf.append(card(' round', a.image, a.name, null, () => searchFor(a.name))));
-        box.append(el('h2', null, 'Top artists'), shelf);
-      }
-      if (source === 'mine') {
-        const out = button('logout', 'Log out of Spotify', logout);
-        out.textContent = 'Log out of Spotify';
-        box.append(out);
-      }
-    }
-
-    // ---- Guest's own Spotify ---------------------------------------------------
-    // Guests log in on their own phone (PKCE, so no secret) and their playlists are
-    // read straight from Spotify; songs they pick still go through the TV's queue. The
-    // app is in Spotify's Development Mode, so only accounts the host has added in the
-    // developer dashboard can log in. Everyone else can paste share links into search.
-    const SPOTIFY_ID = 'd3d064842b4748b5828341ef7af43b11';
-    const SCOPES = 'playlist-read-private playlist-read-collaborative user-library-read user-read-recently-played user-top-read';
-    const REDIRECT = location.origin + location.pathname;
-    const NOT_ADDED = "Spotify hasn't let this account in. Ask the host to add your Spotify email to their app.";
-
-    function loginCard() {
-      const box = el('div', 'login');
-      box.append(el('b', null, 'Your playlists'));
-      box.append(el('p', mineError ? 'error' : null, mineError || 'Log in with Spotify to add songs from your own playlists, liked songs and recently played.'));
-      const go = button('pill', 'Log in with Spotify', login);
-      go.textContent = 'Log in with Spotify';
-      box.append(go, el('p', 'fallback', 'Not added by the host? Share a song in your Spotify app, copy the link and paste it into search.'));
-      return box;
-    }
-
-    function b64url(bytes) {
-      return btoa(String.fromCharCode.apply(null, new Uint8Array(bytes))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    }
-
-    function login() {
-      const verifier = b64url(crypto.getRandomValues(new Uint8Array(48)));
-      const nonce = b64url(crypto.getRandomValues(new Uint8Array(12)));
-      crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)).then(hash => {
-        try { localStorage.setItem('jam-spotify-login', JSON.stringify({ verifier, state: nonce })); } catch (e) {}
-        location.href = 'https://accounts.spotify.com/authorize?' + new URLSearchParams({
-          client_id: SPOTIFY_ID,
-          response_type: 'code',
-          redirect_uri: REDIRECT,
-          scope: SCOPES,
-          state: nonce,
-          code_challenge_method: 'S256',
-          code_challenge: b64url(hash),
-        });
+        lists.forEach(([id, name]) => shelf.append(card(coverArt(id), name, () => openList({
+          name,
+          image: covers[id],
+          uri: 'spotify:playlist:' + id,
+          sub: 'Playlist by Spotify',
+          tracks: [],
+          note: "Spotify doesn't let apps list the songs in its own playlists. Play it on the TV, then add songs on top from search.",
+        }))));
+        const h = el('h2', null, title);
+        if (!i) {
+          h.id = 'playlists';
+          h.append(el('small', null, 'Spotify playlists to play on the TV'));
+        }
+        box.append(h, shelf);
       });
     }
 
-    // Spotify sends the guest back here with ?code=...; it's swapped for tokens kept on
-    // this phone only.
-    function finishLogin() {
-      const q = new URLSearchParams(location.search);
-      if (!q.has('code') && !q.has('error')) return;
-      let pending = null;
-      try {
-        pending = JSON.parse(localStorage.getItem('jam-spotify-login'));
-        localStorage.removeItem('jam-spotify-login');
-        localStorage.setItem('jam-tab', 'spotify');
-      } catch (e) {}
-      history.replaceState(null, '', location.pathname + '#spotify');
-      setSource('mine');
-      if (!pending || !q.get('code') || q.get('state') !== pending.state) {
-        mineError = q.get('error') === 'access_denied' ? 'Login cancelled.' : 'Login failed. Try again.';
-        return renderLibrary();
-      }
-      tokens({ grant_type: 'authorization_code', code: q.get('code'), redirect_uri: REDIRECT, code_verifier: pending.verifier })
-        .then(loadMine, err => {
-          mineError = err.message;
-          renderLibrary();
-        });
-    }
-
-    function tokens(params) {
-      return fetch('https://accounts.spotify.com/api/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams(Object.assign({ client_id: SPOTIFY_ID }, params)),
-      })
-        .then(r => r.json())
-        .then(d => {
-          if (!d.access_token) {
-            logout();
-            throw new Error((d.error_description || 'Spotify login failed') + '. Log in again.');
-          }
-          guest = { access: d.access_token, refresh: d.refresh_token || (guest && guest.refresh), expires: Date.now() + (d.expires_in - 60) * 1000 };
-          try { localStorage.setItem('jam-spotify', JSON.stringify(guest)); } catch (e) {}
-          return guest.access;
-        });
-    }
-
-    function logout() {
-      guest = mine = null;
-      try { localStorage.removeItem('jam-spotify'); } catch (e) {}
-      renderChips();
-      renderLibrary();
-    }
-
-    function mineApi(path) {
-      if (!guest) return Promise.reject(new Error('Log in first'));
-      return (guest.expires > Date.now() ? Promise.resolve(guest.access) : tokens({ grant_type: 'refresh_token', refresh_token: guest.refresh }))
-        .then(t => fetch('https://api.spotify.com/v1' + path, { headers: { Authorization: 'Bearer ' + t } }))
-        .then(r => {
-          if (r.ok) return r.json();
-          throw new Error(r.status === 403 ? NOT_ADDED : 'Spotify error ' + r.status);
-        });
-    }
-
-    // Same shelves as the TV builds for the host (app/js/jam.js).
-    function loadMine() {
-      if (!guest || mine || mineLoading) return;
-      mineLoading = true;
-      mineError = null;
-      const get = path => mineApi(path).catch(() => null);
-      mineApi('/me')
-        .then(me => Promise.all([
-          get('/me/player/recently-played?limit=50'),
-          get('/me/top/tracks?limit=20&time_range=short_term'),
-          get('/me/top/artists?limit=12&time_range=short_term'),
-          get('/me/tracks?limit=1'),
-          get('/me/playlists?limit=50'),
-        ]).then(([recent, top, artists, liked, lists]) => {
-          const seen = {};
-          mine = {
-            recent: recent ? recent.items.map(i => trackInfo(i.track)).filter(t => !seen[t.uri] && (seen[t.uri] = true)).slice(0, 20) : [],
-            top: top ? top.items.map(trackInfo) : [],
-            artists: artists ? artists.items.map(a => ({ name: a.name, image: (a.images[1] || a.images[0] || {}).url })) : [],
-            lists: (liked && liked.total ? [{ id: 'liked', name: 'Liked Songs', count: liked.total }] : []).concat(lists
-              ? lists.items.filter(p => p && (p.owner.id === me.id || p.collaborative)).map(p => ({
-                id: p.id, name: p.name, image: ((p.images || [])[0] || {}).url, count: (p.items || p.tracks || {}).total,
-              }))
-              : []),
-          };
-        }))
-        .catch(err => { mineError = err.message; })
-        .then(() => {
-          mineLoading = false;
-          renderChips();
-          renderLibrary();
-        });
-    }
-
-    function myList(op) {
-      const offset = op.offset || 0;
-      return mineApi((op.id === 'liked' ? '/me/tracks' : '/playlists/' + op.id + '/items') + '?limit=50&offset=' + offset)
-        .then(d => ({
-          tracks: d.items.map(i => i.item || i.track).filter(t => t && t.type === 'track' && !t.is_local).map(trackInfo),
-          next: d.next ? offset + 50 : null,
-        }));
-    }
-
-    // A playlist, Liked Songs or album fills the page, a page of songs at a time; lists
-    // already on the phone (recently played, top songs) show straight away. The
+    // A playlist or album fills the page, a page of songs at a time; lists already on
+    // the phone (top songs, Spotify's playlists) show straight away. The
     // phone's back gesture closes it.
     function openList(list) {
       if (!browsing) history.pushState({ list: true }, '');
@@ -1030,8 +835,7 @@
       const v = browsing;
       v.loading = true;
       renderList();
-      const op = { op: 'list', id: v.id, offset: v.next || 0 };
-      (v.mine ? myList(op) : request({ kind: 'edit', query: JSON.stringify(op) }))
+      request({ kind: 'edit', query: JSON.stringify({ op: 'list', id: v.id, offset: v.next || 0 }) })
         .then(res => {
           ['name', 'image', 'uri', 'sub'].forEach(k => { v[k] = v[k] || res[k]; });
           v.tracks = (v.tracks || []).concat(res.tracks);
@@ -1050,8 +854,7 @@
       const back = button('back', 'Back', () => history.back());
       back.innerHTML = ICON.back;
       box.append(back);
-      if (v.liked) box.append(likedArt('cover'));
-      else if (v.image) box.append(art(v.image, 'cover'));
+      if (v.image) box.append(art(v.image, 'cover'));
       box.append(el('div', 'list-title', v.name || ''));
       const bar = el('div', 'list-bar');
       bar.append(el('span', null, v.sub || ''));
@@ -1075,7 +878,8 @@
         const more = el('button', 'more', 'Show more');
         more.onclick = loadMore;
         box.append(more);
-      } else if (v.tracks && !v.tracks.length) box.append(el('div', 'note', 'No songs here'));
+      } else if (v.note) box.append(el('div', 'note', v.note));
+      else if (v.tracks && !v.tracks.length) box.append(el('div', 'note', 'No songs here'));
     }
 
     window.addEventListener('popstate', () => {
@@ -1151,7 +955,7 @@
           }
           renderDevice();
           renderPlayback();
-          loadLibrary();
+          loadTop();
           if (json === lastJson || gesture) return;
           lastJson = json;
           state = res;
@@ -1684,7 +1488,6 @@
       renderMini();
     }
     document.querySelectorAll('#tabs button').forEach(b => { b.onclick = () => showTab(b.dataset.tab); });
-    finishLogin();
     const asked = location.hash.slice(1);
     let saved = null;
     try { saved = localStorage.getItem('jam-tab'); } catch (e) {}
@@ -1696,7 +1499,6 @@
     renderDevice();
     renderNow();
     renderLibrary();
-    loadMine();
     loadState();
     setInterval(loadState, 2500);
     setInterval(renderPlayback, 500);
