@@ -220,6 +220,8 @@ App.screens.roulette = (() => {
   }
 
   function enter() {
+    // A spin left under way carries on; its bet is already in.
+    if (mode === 'spin') return;
     mode = 'bet';
     row = 0;
     result = null;

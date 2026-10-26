@@ -203,15 +203,19 @@ const Music = (() => {
     if (MEDIA[e.keyCode]) actions[MEDIA[e.keyCode]]();
   }
 
-  // Opening Netflix etc. pauses the music; coming back resumes it.
-  function onVisibility() {
-    if (document.hidden && playing) {
+  // Opening Netflix etc. or YouTube pauses the music; coming back resumes it.
+  function hold(on) {
+    if (on && playing) {
       heldByHide = true;
       actions.toggle();
-    } else if (!document.hidden && heldByHide) {
+    } else if (!on && heldByHide) {
       heldByHide = false;
       actions.toggle();
     }
+  }
+
+  function onVisibility() {
+    hold(document.hidden);
   }
 
   function enabled() {
@@ -335,5 +339,5 @@ const Music = (() => {
     if (text) drawText(g, text, x, cy - 3.5 * cell, cell, playing ? '#d3d7dd' : '#7d838c', { style: 'thin' });
   }
 
-  return { start, draw, key, enabled, api, catalogToken };
+  return { start, draw, key, enabled, api, catalogToken, hold };
 })();

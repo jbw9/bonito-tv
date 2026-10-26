@@ -8,7 +8,8 @@ const CATALOG = [
   { key: 'hdmi4', name: 'HDMI 4', short: 'HDMI 4', color: '#FF7A1A', hdmi: 4 },
   // Heartive is deployed alongside the launcher (see deploy.sh), so its app id is known.
   { key: 'heartive', name: 'HEARTIVE', short: 'HEARTIVE', color: '#FF7575', appId: 'HrtvTV0001.Heartive' },
-  { key: 'youtube', name: 'YOUTUBE', short: 'YOUTUBE', color: '#FF2A1F', match: /^youtube$/, fallbackId: '111299001912' },
+  // Plays inside the launcher with ads stripped (js/youtube.js), not in the TV's YouTube app.
+  { key: 'youtube', name: 'YOUTUBE', short: 'YOUTUBE', color: '#FF2A1F', game: true },
   { key: 'netflix', name: 'NETFLIX', short: 'NETFLIX', color: '#E50914', match: /^netflix/, fallbackId: '3201907018807' },
   { key: 'hulu', name: 'HULU', short: 'HULU', color: '#1CE783', match: /^hulu/, fallbackId: '3201601007625' },
   { key: 'disney', name: 'DISNEY+', short: 'DISNEY+', color: '#3D7BFF', match: /disney/, fallbackId: '3201901017640' },
@@ -25,8 +26,9 @@ const CATALOG = [
   { key: 'stack', name: 'STACK', short: 'STACK', color: '#F4F6F8', game: true, group: 'games' },
   { key: 'blackjack', name: 'BLACKJACK', short: 'BLACKJACK', color: '#F4F6F8', game: true, group: 'games' },
   { key: 'roulette', name: 'ROULETTE', short: 'ROULETTE', color: '#F4F6F8', game: true, group: 'games' },
+  { key: 'cycles', name: 'LIGHT CYCLES', short: 'CYCLES', color: '#F4F6F8', game: true, group: 'games', multi: true },
   { key: 'dice', name: 'DICE', short: 'DICE', color: '#F4F6F8', game: true, group: 'games' },
   { key: 'popeyes', name: 'POPEYES MENU', short: 'POPEYES', color: '#F26A1B', game: true },
 ];
 
-const DEFAULT_ON = ['hdmi1', 'hdmi2', 'hdmi3', 'hdmi4', 'heartive', 'youtube', 'netflix', 'flappy', 'dino', 'snake', 'stack', 'blackjack', 'roulette', 'dice', 'popeyes'];
+const DEFAULT_ON = ['hdmi1', 'hdmi2', 'hdmi3', 'hdmi4', 'heartive', 'youtube', 'netflix', 'flappy', 'dino', 'snake', 'stack', 'blackjack', 'roulette', 'dice', 'cycles', 'popeyes'];

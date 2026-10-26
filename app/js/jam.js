@@ -49,9 +49,9 @@ const Jam = (() => {
   // rounded finder squares and the Spotify logo in the middle, which level H error
   // correction reads through. Modules stay solid squares: at a few pixels each, any
   // rounding leaves gaps that scanners trip on.
-  function renderQr(m, logo) {
+  function renderQr(m, logo, fit) {
     const n = m.length, quiet = 3;
-    const cell = Math.max(2, Math.floor(QR_SIZE / (n + quiet * 2)));
+    const cell = Math.max(2, Math.floor((fit || QR_SIZE) / (n + quiet * 2)));
     const size = (n + quiet * 2) * cell;
     const finder = (x, y) => (x < 7 && y < 7) || (x >= n - 7 && y < 7) || (x < 7 && y >= n - 7);
     return makeCanvas(size, size, b => {
@@ -189,7 +189,9 @@ const Jam = (() => {
       .then(([p, q]) => {
         const now = p && p.item;
         const head = picks[0];
-        if (now && head && head.handed && now.uri === head.uri) {
+        // Gone from Spotify's queue without being seen playing (skipped past between
+        // ticks, or relinked to another uri) also counts, or it would block the list.
+        if (now && head && head.handed && (now.uri === head.uri || (q && !q.queue.some(t => t.uri === head.uri)))) {
           picks.shift();
           savePicks();
         } else if (p && p.is_playing && now && head && !head.handed && now.duration_ms - p.progress_ms < HANDOFF_MS) {
@@ -256,7 +258,9 @@ const Jam = (() => {
     if (!qr) return;
     g.fillStyle = 'rgba(0,0,0,0.88)';
     g.fillRect(0, 0, W, H);
-    g.drawImage(qr, (W - qr.width) / 2, (H - 130 - qr.height) / 2);
+    const y = (H - 150 - qr.height) / 2;
+    g.drawImage(qr, (W - qr.width) / 2, y);
+    drawText(g, 'SCAN FOR REMOTE, SPOTIFY AND GAMES', W / 2, y + qr.height + 24, 3.5, '#d3d7dd', { style: 'thin', align: 'center' });
   }
 
   // Every screen: who just added what, above the now-playing line.
@@ -267,5 +271,5 @@ const Jam = (() => {
     drawText(g, text.length > 40 ? text.slice(0, 38).trim() + '..' : text, 88, H - 140, 4, '#ffffff', { style: 'thin' });
   }
 
-  return { start, draw, drawCode };
+  return { start, draw, drawCode, renderQr };
 })();

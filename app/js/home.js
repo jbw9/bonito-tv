@@ -72,9 +72,8 @@ App.screens.home = (() => {
     return h + ':' + two(d.getMinutes()) + ' ' + ampm;
   }
 
-  // Logos sit straight on the dark background, so near-black parts (Apple TV,
-  // Peacock lettering) are turned white to stay readable. Each is shrunk once,
-  // in halving steps, to its on-screen size so the TV draws it pixel for pixel.
+  // Each logo is shrunk once, in halving steps, to its on-screen size so the TV
+  // draws it pixel for pixel.
   function prepLogo(img) {
     const s = Math.min(LOGO_W / img.naturalWidth, LOGO_H / img.naturalHeight);
     const w = Math.round(img.naturalWidth * s), h = Math.round(img.naturalHeight * s);
@@ -91,25 +90,12 @@ App.screens.home = (() => {
     return makeCanvas(w, h, b => {
       b.imageSmoothingQuality = 'high';
       b.drawImage(src, 0, 0, w, h);
-      const d = b.getImageData(0, 0, w, h);
-      const p = d.data;
-      for (let i = 0; i < p.length; i += 4) {
-        if (p[i] + p[i + 1] + p[i + 2] < 150) p[i] = p[i + 1] = p[i + 2] = 255;
-      }
-      b.putImageData(d, 0, 0);
     });
   }
 
-  // Right-aligned at x, centred on y, with a soft slow glow in the app's colour.
-  function drawLogo(g, logo, x, y, color) {
-    const lx = Math.round(x - logo.width), ly = Math.round(y - logo.height / 2);
-    g.save();
-    g.shadowColor = color;
-    g.shadowBlur = 22 + Math.sin(clock * 2.2) * 6;
-    g.globalAlpha = 0.7;
-    g.drawImage(logo, lx, ly);
-    g.restore();
-    g.drawImage(logo, lx, ly);
+  // Right-aligned at x, centred on y.
+  function drawLogo(g, logo, x, y) {
+    g.drawImage(logo, Math.round(x - logo.width), Math.round(y - logo.height / 2));
   }
 
   // Small triangle after the GAMES label: right when closed, down when open.
@@ -177,7 +163,7 @@ App.screens.home = (() => {
     }
 
     const logo = LOGOS[list[sel].app.key];
-    if (logo) drawLogo(g, logo, right, 590, list[sel].app.color);
+    if (logo) drawLogo(g, logo, right, 590);
 
     if (focus === 'music') Jam.drawCode(g);
     Music.draw(g, focus === 'music');
@@ -185,9 +171,15 @@ App.screens.home = (() => {
     drawLightBar(g);
   }
 
-  function key(k) {
+  function key(k, repeat, fromPhone) {
     const list = rows(), row = list[sel];
-    if (k === 'back') return open ? closeFolder() : Platform.exit();
+    if (k === 'back') {
+      if (focus === 'music') focus = 'list';
+      else if (open) closeFolder();
+      // A guest's phone can't open the launcher again, so it can't close it either.
+      else if (!fromPhone) Platform.exit();
+      return;
+    }
     if (focus === 'list') {
       if (k === 'up') sel = Math.max(0, sel - 1);
       else if (k === 'down' && sel === list.length - 1 && Music.enabled()) focus = 'music';

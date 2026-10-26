@@ -16,6 +16,18 @@ function saveSettings() {
   Platform.save('launcher', settings);
 }
 
+let lastKey = 0; // performance.now() of the last press, for the screensaver
+
+// Presses from the remote and from phones (js/remote.js) both come through here.
+function pressKey(k, repeat, fromPhone) {
+  lastKey = performance.now();
+  App.current.key(k, repeat, fromPhone);
+}
+
+function releaseKey(k) {
+  if (App.current.keyUp) App.current.keyUp(k);
+}
+
 function playableApps() {
   const enabled = CATALOG.filter(a => settings.apps[a.key]);
   const ready = enabled.filter(a => Platform.isAvailable(a));
@@ -27,6 +39,7 @@ const App = {
   screens: {},
   current: null,
   go(name, arg) {
+    if (this.current && this.current.leave) this.current.leave();
     this.current = this.screens[name];
     this.current.enter(arg);
   },
@@ -181,17 +194,17 @@ function boot() {
   window.addEventListener('resize', resize);
 
   // Screensaver: the Popeyes menu board after 10 minutes without a key press.
-  let lastKey = performance.now();
+  lastKey = performance.now();
   document.addEventListener('keydown', e => {
     lastKey = performance.now();
     const k = Platform.keyName(e);
     if (!k) return;
     e.preventDefault();
-    App.current.key(k, e.repeat);
+    pressKey(k, e.repeat);
   });
   document.addEventListener('keyup', e => {
     const k = Platform.keyName(e);
-    if (k && App.current.keyUp) App.current.keyUp(k);
+    if (k) releaseKey(k);
   });
 
   // Coming back from Netflix etc. lands on a fresh launcher, not the splash.
@@ -204,13 +217,17 @@ function boot() {
   App.home();
   Music.start();
   Jam.start();
+  Phones.start();
 
   let last = performance.now();
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     clock += dt;
-    if (now - lastKey > 10 * 60e3 && App.current !== App.screens.popeyes && App.current !== App.screens.splash) App.go('popeyes');
+    // Not over an HDMI input, which would stay up after Back, or YouTube, whose key
+    // presses never reach the launcher.
+    const busy = [App.screens.popeyes, App.screens.splash, App.screens.input, App.screens.youtube].indexOf(App.current) >= 0;
+    if (now - lastKey > 10 * 60e3 && !busy) App.go('popeyes');
     App.current.update(dt);
     App.current.draw(ctx);
     // Home draws it itself, with the controls row.

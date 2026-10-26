@@ -117,7 +117,7 @@ App.screens.snake = (() => {
       if (k === 'up' || k === 'down') sel = (sel + 1) % MENU.length;
       else if (k === 'ok' && !repeat) {
         if (sel === 0) start();
-        else App.go('settings');
+        else App.go('settings', 'snake');
       } else if (k === 'back') App.home();
     } else if (mode === 'play') {
       if (DIRS[k]) {

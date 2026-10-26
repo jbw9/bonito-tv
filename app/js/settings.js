@@ -20,14 +20,21 @@ App.screens.settings = (() => {
       change: () => { settings.clock = settings.clock === '12h' ? '24h' : '12h'; },
     },
     { label: 'RESET BEST', value: () => 'ALL GAMES', action: () => Scores.resetLocal() },
-    { label: 'DONE', action: () => App.home() },
+    { label: 'DONE', action: () => leave() },
   ];
 
-  let sel = 0, inApps = false, appSel = 0;
+  let sel = 0, inApps = false, appSel = 0, from = null;
 
-  function enter() {
+  // `from`: the game whose menu opened settings, to go back to.
+  function enter(arg) {
     sel = 0;
     inApps = false;
+    from = arg || null;
+  }
+
+  function leave() {
+    if (from) App.go(from);
+    else App.home();
   }
 
   function update() {}
@@ -91,7 +98,7 @@ App.screens.settings = (() => {
         row.change(1);
         saveSettings();
       }
-    } else if (k === 'back') App.home();
+    } else if (k === 'back') leave();
   }
 
   return { enter, update, draw, key };

@@ -125,6 +125,8 @@ App.screens.dice = (() => {
   }
 
   function enter() {
+    // A roll left under way carries on; its bet is already in.
+    if (mode === 'roll') return;
     mode = 'bet';
     row = 0;
     message = null;

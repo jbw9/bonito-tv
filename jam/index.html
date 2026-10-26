@@ -26,7 +26,7 @@
       min-height: 100vh; -webkit-font-smoothing: antialiased;
     }
     button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
-    main { max-width: 560px; margin: 0 auto; padding: 0 16px 120px; }
+    main { max-width: 560px; margin: 0 auto; padding: 0 16px 180px; }
     svg { display: block; }
 
     .top {
@@ -102,7 +102,7 @@
     .note { color: var(--sub); padding: 28px 0; text-align: center; }
 
     #mini {
-      position: fixed; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom)); z-index: 4;
+      position: fixed; left: 8px; right: 8px; bottom: calc(72px + env(safe-area-inset-bottom)); z-index: 4;
       max-width: 544px; margin: 0 auto; display: flex; align-items: center; gap: 10px; padding: 8px;
       border-radius: 8px; background: #2b2b2b; background: color-mix(in srgb, var(--tint) 70%, #000); box-shadow: 0 4px 20px rgba(0,0,0,.4);
     }
@@ -116,17 +116,68 @@
     #mini .line div { height: 100%; width: 0; background: #fff; border-radius: 1px; }
 
     #toast {
-      position: fixed; left: 50%; bottom: calc(80px + env(safe-area-inset-bottom)); z-index: 5;
+      position: fixed; left: 50%; bottom: calc(144px + env(safe-area-inset-bottom)); z-index: 5;
       transform: translate(-50%, 12px); opacity: 0; pointer-events: none; transition: transform .2s ease, opacity .2s ease;
       max-width: calc(100% - 32px); padding: 12px 16px; border-radius: 8px;
       background: #fff; color: #121212; font-weight: 700; font-size: 14px;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 4px 20px rgba(0,0,0,.4);
     }
     #toast.show { transform: translate(-50%, 0); opacity: 1; }
+
+    .tabs {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 4; display: flex; justify-content: center;
+      padding-bottom: env(safe-area-inset-bottom); background: linear-gradient(transparent, rgba(0,0,0,.9) 30%);
+    }
+    .tabs button { flex: 1; max-width: 186px; height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--sub); font-size: 11px; font-weight: 700; }
+    .tabs button.on { color: var(--ink); }
+
+    /* Remote and game pads: nothing to select, zoom or long-press. */
+    .dpad, .pill { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+    .dpad { position: relative; width: min(80vw, 320px); aspect-ratio: 1; margin: 36px auto 28px; border-radius: 50%; background: var(--highlight); box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
+    .dpad button { position: absolute; display: grid; place-items: center; color: var(--sub); }
+    .dpad button.held { color: var(--green); }
+    .dpad .pad-up { left: 33%; top: 0; width: 34%; height: 32%; }
+    .dpad .pad-down { left: 33%; bottom: 0; width: 34%; height: 32%; }
+    .dpad .pad-left { top: 33%; left: 0; width: 32%; height: 34%; }
+    .dpad .pad-right { top: 33%; right: 0; width: 32%; height: 34%; }
+    .dpad .pad-down svg { transform: rotate(180deg); }
+    .dpad .pad-left svg { transform: rotate(-90deg); }
+    .dpad .pad-right svg { transform: rotate(90deg); }
+    .dpad .pad-ok { left: 31%; top: 31%; width: 38%; height: 38%; border-radius: 50%; background: #3e3e3e; color: var(--ink); font-size: 18px; font-weight: 800; }
+    .dpad .pad-ok.held { background: var(--green); color: #000; }
+    .pills { display: flex; gap: 12px; justify-content: center; }
+    .pill { height: 48px; padding: 0 26px; border-radius: 999px; background: var(--highlight); font-weight: 700; font-size: 15px; }
+    .pill:active, .pill.held { background: #3e3e3e; }
+    .pill.go { background: var(--green); color: #000; }
+    .hint { text-align: center; color: var(--dim); font-size: 13px; margin-top: 18px; }
+
+    .on-tv { margin-top: 8px; padding: 16px; border-radius: 8px; background: var(--highlight); }
+    .on-tv small { display: block; color: var(--sub); font-size: 13px; font-weight: 500; }
+    .on-tv b { font-size: 20px; font-weight: 800; }
+    .seat { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-weight: 700; }
+    .seat i { width: 14px; height: 14px; border-radius: 50%; flex: none; }
+    .seat span { color: var(--sub); font-weight: 500; margin-left: auto; }
+    .game-row { display: flex; align-items: center; width: 100%; padding: 14px 0; text-align: left; border-bottom: 1px solid #222; }
+    .game-row .meta .name { font-weight: 700; }
+    .game-row svg { color: var(--sub); }
+    #player { margin: 14px 0 0; width: 100%; height: 40px; padding: 0 14px; border-radius: 999px; background: #121212; color: var(--ink); font-size: 15px; }
   </style>
 </head>
 <body>
   <main>
+    <section id="tab-remote" hidden>
+      <div class="top"><div class="bar"><h1>Remote</h1><div class="device" id="device-remote"></div></div></div>
+      <div id="remote-pad"></div>
+      <div class="pills" id="remote-pills"></div>
+      <div class="hint">Hold an arrow to keep moving. Works while the launcher is open.</div>
+    </section>
+    <section id="tab-games" hidden>
+      <div class="top"><div class="bar"><h1>Games</h1><div class="device" id="device-games"></div></div></div>
+      <div id="game-now"></div>
+      <div id="game-pad" hidden></div>
+      <div id="game-list"></div>
+    </section>
+    <section id="tab-spotify" hidden>
     <div class="top">
       <div class="bar">
         <h1>Jam</h1>
@@ -145,8 +196,14 @@
       <div id="queue"></div>
     </div>
     <div id="results" hidden></div>
+    </section>
   </main>
   <div id="mini" hidden></div>
+  <nav class="tabs" id="tabs">
+    <button data-tab="remote"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="2.5" width="10" height="19" rx="3"/><circle cx="12" cy="8" r="2"/><path d="M10 14h4M10 17h4" stroke-linecap="round"/></svg> Remote</button>
+    <button data-tab="spotify"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg> Spotify</button>
+    <button data-tab="games"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 8h12a4 4 0 0 1 4 4v1a4 4 0 0 1-7 2.6L14 15h-4l-1 .6A4 4 0 0 1 2 13v-1a4 4 0 0 1 4-4z"/><path d="M7 11v3M5.5 12.5h3M16 12h.01M18 14h.01"/></svg> Games</button>
+  </nav>
   <div id="toast"></div>
   <script>
     // Guests' side of the launcher's jam (app/js/jam.js). Requests are rows in the
@@ -170,6 +227,8 @@
       shuffle: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h3.5c4.5 0 6.5 12 11 12H21M3 18h3.5c1.8 0 3.1-1.9 4.3-4.3M13.2 10.3C14.4 7.9 15.7 6 17.5 6H21M18 3l3 3-3 3M18 15l3 3-3 3"/></svg>',
       repeat: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3l3 3-3 3M20 6H8a4 4 0 0 0-4 4v1M7 21l-3-3 3-3M4 18h12a4 4 0 0 0 4-4v-1"/></svg>',
       repeat1: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3l3 3-3 3M20 6H8a4 4 0 0 0-4 4v1M7 21l-3-3 3-3M4 18h12a4 4 0 0 0 4-4v-1"/><path d="M11 10.5l1.5-1v5.5" stroke-width="1.8"/></svg>',
+      chevron: '<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6"/></svg>',
+      go: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>',
       handle: '<svg width="20" height="20" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 8h16M4 12h16M4 16h16"/></svg>',
     };
     let state = null, lastJson = '', searchSeq = 0, debounce = null, toastTimer = null, gesture = false, pendingEdits = 0;
@@ -620,7 +679,7 @@
 
     function renderMini() {
       const mini = $('mini'), now = state && state.now;
-      mini.hidden = !now || $('results').hidden;
+      mini.hidden = !now || $('results').hidden || tab !== 'spotify';
       if (mini.hidden) return;
       mini.textContent = '';
       const meta = el('div', 'meta');
@@ -676,6 +735,242 @@
     $('name').addEventListener('input', () => {
       try { localStorage.setItem('jam-name', $('name').value.trim()); } catch (e) {}
     });
+
+    // ---- TV link: Remote and Games tabs --------------------------------------
+    // Supabase Realtime broadcast, a websocket straight to the TV (app/js/remote.js):
+    // presses land in a tenth of a second, where request rows take a second or more.
+    // The TV broadcasts what it's showing; phones send presses and picks back.
+    const TOPIC = 'realtime:tv-' + ROOM;
+    let ws = null, linked = false, wsRef = 0, tv = null, wantSeat = false, tab = 'remote';
+    const ME = (() => {
+      try {
+        let id = localStorage.getItem('jam-id');
+        if (!id) localStorage.setItem('jam-id', id = Math.random().toString(36).slice(2, 10));
+        return id;
+      } catch (e) { return Math.random().toString(36).slice(2, 10); }
+    })();
+
+    function raw(msg) {
+      msg.ref = String(++wsRef);
+      ws.send(JSON.stringify(msg));
+    }
+
+    function send(event, payload) {
+      if (linked) raw({ topic: TOPIC, event: 'broadcast', payload: { type: 'broadcast', event, payload: payload || {} } });
+    }
+
+    function connect() {
+      if (ws) return;
+      ws = new WebSocket(SUPABASE.replace(/^http/, 'ws') + '/realtime/v1/websocket?vsn=1.0.0&apikey=' + KEY);
+      ws.onopen = () => raw({ topic: TOPIC, event: 'phx_join', payload: { config: { broadcast: { self: false }, presence: { key: '' }, private: false } } });
+      ws.onmessage = m => {
+        const msg = JSON.parse(m.data);
+        if (msg.event === 'phx_reply' && msg.topic === TOPIC && msg.payload.status === 'ok' && !linked) {
+          linked = true;
+          send('hello');
+        } else if (msg.event === 'broadcast' && msg.payload.event === 'state') {
+          tv = msg.payload.payload;
+          tv.seen = Date.now();
+          renderGames();
+        }
+      };
+      ws.onclose = () => {
+        ws = null;
+        linked = false;
+        setTimeout(connect, document.hidden ? 8000 : 1500);
+      };
+    }
+
+    // A locked phone's socket can die quietly; coming back reconnects straight away.
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) return;
+      if (ws && ws.readyState > 1) ws = null;
+      connect();
+      send('hello');
+    });
+    setInterval(() => { if (ws && ws.readyState === 1) raw({ topic: 'phoenix', event: 'heartbeat', payload: {} }); }, 25000);
+
+    // The TV re-sends its state at least every 20 seconds while the launcher is open.
+    function tvLive() {
+      return !!(tv && Date.now() - tv.seen < 45000);
+    }
+
+    function buzz() {
+      if (navigator.vibrate) navigator.vibrate(8);
+    }
+
+    // Press and release go to the TV like a real remote's; a held arrow repeats.
+    function holdable(b, onDown, onUp, repeats) {
+      let timer = null, held = false;
+      const up = () => {
+        if (!held) return;
+        held = false;
+        clearTimeout(timer);
+        b.classList.remove('held');
+        onUp();
+      };
+      b.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        b.setPointerCapture(e.pointerId);
+        held = true;
+        b.classList.add('held');
+        buzz();
+        onDown(false);
+        if (repeats) timer = setTimeout(function again() { onDown(true); timer = setTimeout(again, 110); }, 400);
+      });
+      b.addEventListener('pointerup', up);
+      b.addEventListener('pointercancel', up);
+      b.addEventListener('contextmenu', e => e.preventDefault());
+    }
+
+    function dpad(onKey) {
+      const box = el('div', 'dpad');
+      ['up', 'left', 'ok', 'right', 'down'].forEach(k => {
+        const b = button('pad-' + k, k === 'ok' ? 'OK' : k, null);
+        if (k === 'ok') b.textContent = 'OK';
+        else b.innerHTML = ICON.chevron;
+        holdable(b, repeat => onKey(k, true, repeat), () => onKey(k, false), k !== 'ok');
+        box.append(b);
+      });
+      return box;
+    }
+
+    function sendKey(k, down, repeat) {
+      send('key', { k, down, repeat: !!repeat });
+    }
+
+    function pill(label, onDown, cls) {
+      const b = button('pill' + (cls ? ' ' + cls : ''), label, null);
+      b.textContent = label;
+      holdable(b, repeat => { if (!repeat) onDown(); }, () => {});
+      return b;
+    }
+
+    function renderLink() {
+      const on = tvLive();
+      ['device-remote', 'device-games'].forEach(id => {
+        $(id).className = on ? 'device on' : 'device';
+        $(id).innerHTML = ICON.speaker;
+        $(id).append(on ? 'TV' : linked ? 'TV off' : 'Connecting');
+      });
+    }
+
+    function playerName() {
+      return ($('name').value.trim() || '').slice(0, 12);
+    }
+
+    function currentGame() {
+      return tvLive() && tv.games.find(g => g.key === tv.screen);
+    }
+
+    function mySeat() {
+      return tv && tv.game && tv.game.players && tv.game.players.find(p => p.id === ME);
+    }
+
+    // Built once and only shown or hidden, so a finger on it never loses its button.
+    $('remote-pad').append(dpad(sendKey));
+    $('remote-pills').append(
+      pill('Back', () => { sendKey('back', true); sendKey('back', false); }),
+      pill('Home', () => send('home')));
+    $('game-pad').append(dpad((k, down, repeat) => {
+      const g = currentGame();
+      if (!g || !g.multi) return sendKey(k, down, repeat);
+      if (!down || repeat) return;
+      if (k !== 'ok') send('pad', { id: ME, k });
+      else if (tv.game.mode === 'lobby') send('start');
+    }));
+
+    let gamesJson = '';
+    function renderGames() {
+      renderLink();
+      const g = currentGame(), seat = mySeat(), state = tv && tv.game;
+      // Back in a lobby without a seat after asking for one (the TV left and came
+      // back to the game): take it again.
+      if (g && g.multi && wantSeat && !seat && state && state.mode === 'lobby') send('join', { id: ME, name: playerName() });
+
+      const view = JSON.stringify([tvLive(), g, seat, state, tv && tv.games]);
+      if (view === gamesJson) return;
+      gamesJson = view;
+
+      const now = $('game-now');
+      now.textContent = '';
+      $('game-pad').hidden = !g || (g.multi && !seat);
+      if (!tvLive()) {
+        now.append(el('div', 'note', linked ? 'Open the launcher on the TV to play.' : 'Connecting to the TV…'));
+      } else if (g) {
+        const card = el('div', 'on-tv');
+        card.append(el('small', null, 'On the TV'), el('b', null, titleCase(g.name)));
+        if (g.multi && state) {
+          state.players.forEach(p => {
+            const row = el('div', 'seat');
+            const dot = el('i');
+            dot.style.background = p.color;
+            row.append(dot, p.name + (p.id === ME ? ' (you)' : ''), el('span', null, p.wins + (p.wins === 1 ? ' win' : ' wins')));
+            card.append(row);
+          });
+          if (!seat) {
+            const input = el('input');
+            input.id = 'player';
+            input.maxLength = 12;
+            input.placeholder = 'Your name';
+            input.value = $('name').value;
+            input.oninput = () => { $('name').value = input.value; $('name').dispatchEvent(new Event('input')); };
+            const pills = el('div', 'pills');
+            pills.style.marginTop = '14px';
+            if (state.mode === 'lobby' && state.players.length < 4) {
+              pills.append(pill('Join game', () => { wantSeat = true; send('join', { id: ME, name: playerName() }); }, 'go'));
+              card.append(input, pills);
+            } else card.append(el('small', null, state.mode === 'lobby' ? 'All four seats are taken.' : 'Round under way. Join when it ends.'));
+          } else {
+            card.style.boxShadow = 'inset 4px 0 0 ' + seat.color;
+            card.append(el('small', null, state.mode === 'lobby' ? "You're " + seat.label.toLowerCase() + '. Press OK to start.' : 'Steer with the arrows.'));
+            const pills = el('div', 'pills');
+            pills.style.marginTop = '14px';
+            if (state.mode === 'lobby') pills.append(pill('Leave', () => { wantSeat = false; send('leave', { id: ME }); }));
+            card.append(pills);
+          }
+        }
+        now.append(card);
+      }
+
+      const list = $('game-list');
+      list.textContent = '';
+      if (!tvLive()) return;
+      list.append(el('h2', null, g ? 'Switch game' : 'Pick a game'));
+      tv.games.forEach(game => {
+        const row = button('game-row', 'Play ' + game.name, () => {
+          wantSeat = !!game.multi;
+          send('open', { game: game.key });
+          if (game.multi) setTimeout(() => send('join', { id: ME, name: playerName() }), 400);
+        });
+        const meta = el('div', 'meta');
+        meta.append(el('div', 'name', titleCase(game.name)), el('div', 'sub', game.multi ? '2-4 players, phones as controllers' : 'Play with the pad'));
+        row.append(meta);
+        row.insertAdjacentHTML('beforeend', ICON.go);
+        list.append(row);
+      });
+    }
+
+    function titleCase(s) {
+      return s.toLowerCase().replace(/(^|\s)\S/g, c => c.toUpperCase());
+    }
+
+    function showTab(name) {
+      tab = name;
+      ['remote', 'spotify', 'games'].forEach(t => { $('tab-' + t).hidden = t !== name; });
+      document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === name));
+      try { localStorage.setItem('jam-tab', name); } catch (e) {}
+      history.replaceState(null, '', '#' + name);
+      renderMini();
+    }
+    document.querySelectorAll('#tabs button').forEach(b => { b.onclick = () => showTab(b.dataset.tab); });
+    const asked = location.hash.slice(1);
+    let saved = null;
+    try { saved = localStorage.getItem('jam-tab'); } catch (e) {}
+    showTab(['remote', 'spotify', 'games'].indexOf(asked) >= 0 ? asked : saved || 'remote');
+    connect();
+    renderGames();
+    setInterval(renderGames, 3000);
 
     renderDevice();
     renderNow();

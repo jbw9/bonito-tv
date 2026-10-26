@@ -218,8 +218,9 @@ App.screens.blackjack = (() => {
     } else if (mode === 'done' && k === 'ok') toBetting();
   }
 
+  // A hand left half-played (Back, the screensaver) picks up where it was; its bet is already in.
   function enter() {
-    toBetting();
+    if (mode !== 'play' && mode !== 'dealer') toBetting();
   }
 
   return { enter, update, draw, key };

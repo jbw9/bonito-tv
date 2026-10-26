@@ -123,7 +123,7 @@ App.screens.stack = (() => {
       if (k === 'up' || k === 'down') sel = (sel + 1) % MENU.length;
       else if (k === 'ok' && !repeat) {
         if (sel === 0) start();
-        else App.go('settings');
+        else App.go('settings', 'stack');
       } else if (k === 'back') App.home();
     } else if (mode === 'play') {
       if ((k === 'ok' || k === 'up' || k === 'down') && !repeat) drop();
