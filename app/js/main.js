@@ -235,6 +235,7 @@ function boot() {
     const bare = App.current === App.screens.splash || App.current === App.screens.popeyes;
     if (!bare && App.current !== App.screens.home) Music.draw(ctx);
     if (!bare) Jam.draw(ctx);
+    Phones.draw(ctx);
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);

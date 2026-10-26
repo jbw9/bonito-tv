@@ -64,6 +64,7 @@ function makeParty(title, max) {
     state(mode, extra) {
       return {
         mode: party.open ? 'lobby' : mode,
+        seats: max,
         players: party.players.map(p => Object.assign({ id: p.id, name: p.name, label: p.label, color: p.color, wins: p.wins }, extra && extra(p))),
       };
     },

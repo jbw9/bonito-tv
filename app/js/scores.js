@@ -3,7 +3,7 @@
 // Boards are cached so the menus work offline, and scores that couldn't be sent are
 // kept and retried on the next load.
 const Scores = (() => {
-  const LOCAL_BEST = { flappy: 'best', dino: 'best-dino', snake: 'best-snake', stack: 'best-stack' };
+  const LOCAL_BEST = { flappy: 'best', dino: 'best-dino', stack: 'best-stack' };
   const boards = {}; // game -> [{ name, score }], best per name, high to low
   let names = Platform.load('names', []);
 

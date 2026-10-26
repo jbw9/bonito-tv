@@ -152,6 +152,21 @@
     .touchpad { position: relative; width: 100%; aspect-ratio: 1; margin: 20px 0 8px; border-radius: 16px; background: var(--highlight); touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; overflow: hidden; }
     .touchpad::after { content: 'Drag to move'; position: absolute; left: 0; right: 0; bottom: 14px; text-align: center; color: var(--dim); font-size: 13px; pointer-events: none; }
     .touchpad i { position: absolute; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%; background: var(--seat, var(--green)); opacity: .9; pointer-events: none; }
+    .kbd { display: block; width: 100%; height: 48px; margin: 22px 0 0; padding: 0 16px; border-radius: 8px; background: #fff; color: #121212; font-size: 17px; font-weight: 500; }
+    .kbd::placeholder { color: #535353; }
+    .volume { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 22px; }
+    .volume .pill { min-width: 64px; padding: 0 18px; font-size: 22px; }
+    .volume .pill.muted { background: var(--red); }
+    .volume span { min-width: 92px; text-align: center; color: var(--sub); font-size: 14px; font-weight: 700; }
+    .board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: min(86vw, 360px); margin: 20px auto 0; }
+    .board button { aspect-ratio: 1; border-radius: 12px; background: var(--highlight); font-size: 56px; font-weight: 800; }
+    .board button:disabled { opacity: 1; }
+    .board.wait button { opacity: .55; }
+    .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+    .choices button { min-height: 110px; padding: 12px; border-radius: 12px; color: #fff; font-weight: 700; font-size: 16px; line-height: 1.25; }
+    .choices button b { display: block; font-size: 13px; opacity: .8; margin-bottom: 4px; }
+    .choices.locked button:not(.mine), .choices.shown button:not(.right) { opacity: .3; }
+    .choices button.mine { box-shadow: inset 0 0 0 4px #fff; }
     .hint { text-align: center; color: var(--dim); font-size: 13px; margin-top: 18px; }
 
     .on-tv { margin-top: 8px; padding: 16px; border-radius: 8px; background: var(--highlight); }
@@ -172,13 +187,18 @@
       <div class="top"><div class="bar"><h1>Remote</h1><div class="device" id="device-remote"></div></div></div>
       <div id="remote-pad"></div>
       <div class="pills" id="remote-pills"></div>
-      <div class="hint">Hold an arrow to keep moving. Works while the launcher is open.</div>
+      <div class="volume" id="remote-volume"></div>
+      <div id="remote-kbd"></div>
+      <div class="hint">Hold an arrow to keep moving. Works in the launcher and Heartive.</div>
     </section>
     <section id="tab-games" hidden>
       <div class="top"><div class="bar"><h1>Games</h1><div class="device" id="device-games"></div></div></div>
       <div id="game-now"></div>
       <div id="game-pad" hidden></div>
       <div id="game-touch" hidden></div>
+      <div id="game-kbd" hidden></div>
+      <div id="game-board" hidden></div>
+      <div id="game-choice" hidden></div>
       <div id="game-list"></div>
     </section>
     <section id="tab-spotify" hidden>
@@ -759,8 +779,10 @@
       ws.send(JSON.stringify(msg));
     }
 
+    // Addressed to whichever app (launcher or Heartive) last said it's in front.
     function send(event, payload) {
-      if (linked) raw({ topic: TOPIC, event: 'broadcast', payload: { type: 'broadcast', event, payload: payload || {} } });
+      payload = Object.assign({ app: tv && tv.app }, payload);
+      if (linked) raw({ topic: TOPIC, event: 'broadcast', payload: { type: 'broadcast', event, payload } });
     }
 
     function connect() {
@@ -771,7 +793,7 @@
         const msg = JSON.parse(m.data);
         if (msg.event === 'phx_reply' && msg.topic === TOPIC && msg.payload.status === 'ok' && !linked) {
           linked = true;
-          send('hello');
+          send('hello', { app: null });
         } else if (msg.event === 'broadcast' && msg.payload.event === 'state') {
           tv = msg.payload.payload;
           tv.seen = Date.now();
@@ -790,7 +812,7 @@
       if (document.hidden) return;
       if (ws && ws.readyState > 1) ws = null;
       connect();
-      send('hello');
+      send('hello', { app: null });
     });
     setInterval(() => { if (ws && ws.readyState === 1) raw({ topic: 'phoenix', event: 'heartbeat', payload: {} }); }, 25000);
 
@@ -871,11 +893,110 @@
       return tv && tv.game && tv.game.players && tv.game.players.find(p => p.id === ME);
     }
 
+    // Typing on the phone types on the TV: each change to the box goes over as
+    // backspaces and new letters, and Enter as Enter (which also clears the box).
+    function keyboard(placeholder) {
+      const input = el('input', 'kbd');
+      input.placeholder = placeholder;
+      input.autocomplete = 'off';
+      input.spellcheck = false;
+      input.setAttribute('autocapitalize', 'off');
+      input.setAttribute('autocorrect', 'off');
+      input.setAttribute('enterkeyhint', 'send');
+      let prev = '';
+      input.addEventListener('input', () => {
+        const now = input.value;
+        let i = 0;
+        while (i < prev.length && i < now.length && prev[i] === now[i]) i++;
+        const back = prev.length - i, text = now.slice(i);
+        prev = now;
+        if (back || text) send('type', { back, text });
+      });
+      input.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          send('type', { enter: true });
+          input.value = prev = '';
+        } else if (e.key === 'Backspace' && !input.value) send('type', { back: 1 }); // past what's in the box
+      });
+      return input;
+    }
+
+    // TV volume: hold + or - to keep going.
+    function volumeRow() {
+      const box = el('div', 'volume');
+      const btn = (label, change, repeats) => {
+        const b = button('pill', label, null);
+        b.textContent = label;
+        holdable(b, () => send('volume', { change }), () => {}, repeats);
+        return b;
+      };
+      const mute = btn('Mute', 'mute', false);
+      mute.style.fontSize = '15px';
+      box.append(btn('−', 'down', true), el('span', null, 'Volume'), btn('+', 'up', true), mute);
+      return box;
+    }
+
+    function renderVolume() {
+      const v = tvLive() && tv.volume, box = $('remote-volume').firstChild;
+      box.querySelector('span').textContent = v ? (v.muted ? 'Muted' : 'Volume ' + v.level) : 'Volume';
+      box.lastChild.classList.toggle('muted', !!(v && v.muted));
+    }
+
+    function renderBoard(state) {
+      const box = $('game-board');
+      box.textContent = '';
+      if (!state.board) return;
+      const myTurn = state.turn === ME;
+      const grid = el('div', 'board' + (myTurn ? '' : ' wait'));
+      state.board.forEach((seat, i) => {
+        const b = button('', 'Square ' + (i + 1), () => { if (myTurn && seat == null) send('place', { id: ME, i }); });
+        if (seat != null) {
+          b.textContent = seat ? 'O' : 'X';
+          b.style.color = state.players[seat].color;
+        }
+        b.disabled = !myTurn || seat != null;
+        grid.append(b);
+      });
+      const who = state.players.find(p => p.id === state.turn);
+      box.append(el('div', 'hint', myTurn ? 'Your turn' : who ? who.name + "'s turn" : ' '), grid);
+    }
+
+    let myAnswer = null; // [question number, answer index]
+    function renderChoices(state) {
+      const box = $('game-choice');
+      box.textContent = '';
+      if (!state.q) return box.append(el('div', 'hint', 'Waiting for the next question…'));
+      const mine = myAnswer && myAnswer[0] === state.q.n ? myAnswer[1] : null;
+      const shown = state.q.correct != null;
+      const grid = el('div', 'choices' + (shown ? ' shown' : mine != null ? ' locked' : ''));
+      ['#e21b3c', '#1368ce', '#d89e00', '#26890c'].forEach((color, i) => {
+        const b = button(i === mine ? 'mine' : '', 'Answer ' + 'ABCD'[i], () => {
+          if (mine != null || shown) return;
+          myAnswer = [state.q.n, i];
+          buzz();
+          send('answer', { id: ME, i });
+          gamesJson = '';
+          renderGames();
+        });
+        if (shown && i === state.q.correct) b.classList.add('right');
+        b.style.background = color;
+        b.append(el('b', null, 'ABCD'[i]), state.q.answers[i]);
+        grid.append(b);
+      });
+      const me = mySeat();
+      const line = shown ? (mine === state.q.correct ? 'Right! +' + me.gain : mine == null ? 'Too slow' : 'Wrong') : mine != null ? 'Locked in' : 'Question ' + state.q.n + ' of ' + state.q.of;
+      box.append(el('div', 'hint', line + (me ? ' · ' + me.score + ' points' : '')), grid);
+    }
+
     // Built once and only shown or hidden, so a finger on it never loses its button.
     $('remote-pad').append(dpad(sendKey));
     $('remote-pills').append(
       pill('Back', () => { sendKey('back', true); sendKey('back', false); }),
       pill('Home', () => send('home')));
+    $('remote-volume').append(volumeRow());
+    $('remote-kbd').append(keyboard('Type on the TV'));
+    $('game-kbd').append(keyboard('Type your guess'));
     $('game-pad').append(dpad((k, down, repeat) => {
       const g = currentGame();
       if (!g || !g.multi) return sendKey(k, down, repeat);
@@ -927,17 +1048,25 @@
       // back to the game): take it again.
       if (g && g.multi && wantSeat && !seat && state && state.mode === 'lobby') send('join', { id: ME, name: playerName() });
 
-      const view = JSON.stringify([tvLive(), g, seat, state, tv && tv.games]);
+      renderVolume();
+      const view = JSON.stringify([tvLive(), tv && tv.app, g, seat, state, tv && tv.games]);
       if (view === gamesJson) return;
       gamesJson = view;
 
       const now = $('game-now');
       now.textContent = '';
-      $('game-pad').hidden = !g || g.multi === 'touch' || (g.multi && !seat);
+      $('game-pad').hidden = !g || (g.multi && (g.multi !== 'pad' || !seat));
       $('game-touch').hidden = !g || g.multi !== 'touch' || !seat;
+      $('game-kbd').hidden = !g || !g.keyboard;
+      $('game-board').hidden = !g || g.multi !== 'board' || !seat;
+      $('game-choice').hidden = !g || g.multi !== 'choice' || !seat;
+      if (seat && g.multi === 'board') renderBoard(state);
+      if (seat && g.multi === 'choice') renderChoices(state);
       if (seat) document.documentElement.style.setProperty('--seat', seat.color);
       if (!tvLive()) {
         now.append(el('div', 'note', linked ? 'Open the launcher on the TV to play.' : 'Connecting to the TV…'));
+      } else if (tv.app === 'heartive') {
+        now.append(el('div', 'note', 'Heartive is open on the TV. Press Home on the Remote tab to come back to the games.'));
       } else if (g) {
         const card = el('div', 'on-tv');
         card.append(el('small', null, 'On the TV'), el('b', null, titleCase(g.name)));
@@ -958,13 +1087,13 @@
             input.oninput = () => { $('name').value = input.value; $('name').dispatchEvent(new Event('input')); };
             const pills = el('div', 'pills');
             pills.style.marginTop = '14px';
-            if (state.mode === 'lobby' && state.players.length < 4) {
+            if (state.mode === 'lobby' && state.players.length < state.seats) {
               pills.append(pill('Join game', () => { wantSeat = true; send('join', { id: ME, name: playerName() }); }, 'go'));
               card.append(input, pills);
-            } else card.append(el('small', null, state.mode === 'lobby' ? 'All four seats are taken.' : 'Round under way. Join when it ends.'));
+            } else card.append(el('small', null, state.mode === 'lobby' ? 'All seats are taken.' : 'Round under way. Join when it ends.'));
           } else {
             card.style.boxShadow = 'inset 4px 0 0 ' + seat.color;
-            const how = g.multi === 'touch' ? 'Drag on the pad below to move.' : 'Steer with the arrows.';
+            const how = { touch: 'Drag on the pad below to move.', pad: 'Steer with the arrows.', board: 'Tap a square on your turn.', choice: 'Tap your answer.' }[g.multi];
             card.append(el('small', null, state.mode === 'lobby' ? "You're " + seat.label.toLowerCase() + '. Start when everyone is in.' : how));
             const pills = el('div', 'pills');
             pills.style.marginTop = '14px';
@@ -981,16 +1110,21 @@
 
       const list = $('game-list');
       list.textContent = '';
-      if (!tvLive()) return;
+      if (!tvLive() || tv.app === 'heartive') return;
       list.append(el('h2', null, g ? 'Switch game' : 'Pick a game'));
       tv.games.forEach(game => {
         const row = button('game-row', 'Play ' + game.name, () => {
+          // iOS only raises the keyboard for a focus made during a tap, so it's done here.
+          if (game.keyboard) {
+            $('game-kbd').hidden = false;
+            $('game-kbd').firstChild.focus();
+          }
           wantSeat = !!game.multi;
           send('open', { game: game.key });
           if (game.multi) setTimeout(() => send('join', { id: ME, name: playerName() }), 400);
         });
         const meta = el('div', 'meta');
-        meta.append(el('div', 'name', titleCase(game.name)), el('div', 'sub', game.multi ? 'Party game: up to 4 phones, or you vs the CPU' : 'Play with the pad'));
+        meta.append(el('div', 'name', titleCase(game.name)), el('div', 'sub', game.multi ? 'Party game: phones as controllers, or you vs the CPU' : game.keyboard ? 'Type with your phone' : 'Play with the pad'));
         row.append(meta);
         row.insertAdjacentHTML('beforeend', ICON.go);
         list.append(row);

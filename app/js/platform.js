@@ -98,6 +98,21 @@ const Platform = (() => {
     });
   }
 
+  // TV volume, changed by 'up', 'down' or 'mute' (which flips it). Returns
+  // { level, muted }, or null off the TV.
+  function volume(change) {
+    if (!isTV) return null;
+    try {
+      const a = tizen.tvaudiocontrol;
+      if (change === 'mute') a.setMute(!a.isMute());
+      else if (change === 'up') a.setVolumeUp();
+      else if (change === 'down') a.setVolumeDown();
+      return { level: a.getVolume(), muted: a.isMute() };
+    } catch (e) {
+      return null;
+    }
+  }
+
   function exit() {
     if (isTV) tizen.application.getCurrentApplication().exit();
   }
@@ -148,5 +163,5 @@ const Platform = (() => {
     return { temp: Math.round(w.current.temperature_2m), code: w.current.weather_code, day: !!w.current.is_day };
   }
 
-  return { isTV, scanApps, scanInputs, isAvailable, launch, hideInput, exit, keyName, load, save, weather };
+  return { isTV, scanApps, scanInputs, isAvailable, launch, hideInput, volume, exit, keyName, load, save, weather };
 })();

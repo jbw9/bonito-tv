@@ -73,6 +73,20 @@ App.screens.entry = (() => {
     else if (typed.length < MAX_LEN) typed += label === 'SPACE' ? ' ' : label;
   }
 
+  // Typing from a phone (js/remote.js) goes straight into a new name: letters, '\b' to
+  // delete and '\n' to save.
+  function type(ch) {
+    if (!record) return;
+    if (mode !== 'type') {
+      if (ch === '\b' || ch === '\n') return;
+      mode = 'type';
+    }
+    if (ch === '\b') typed = typed.slice(0, -1);
+    else if (ch === '\n') {
+      if (typed.trim()) finish(typed.trim());
+    } else if (typed.length < MAX_LEN && (ch === ' ' || KEYS.indexOf(ch.toUpperCase()) >= 0)) typed += ch.toUpperCase();
+  }
+
   function key(k, repeat) {
     if (mode !== 'type') {
       if (k === 'up') sel = Math.max(0, sel - 1);
@@ -107,5 +121,5 @@ App.screens.entry = (() => {
     }
   }
 
-  return { enter, update, draw, key };
+  return { enter, update, draw, key, type };
 })();

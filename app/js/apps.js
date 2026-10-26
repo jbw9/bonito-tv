@@ -22,15 +22,19 @@ const CATALOG = [
   // Not apps: plain screens. `key` is the screen; `group: 'games'` puts it in the home screen's GAMES folder.
   { key: 'flappy', name: 'FLAPPY BIRD', short: 'FLAPPY', color: '#F4F6F8', game: true, group: 'games' },
   { key: 'dino', name: 'DINO RUN', short: 'DINO', color: '#F4F6F8', game: true, group: 'games' },
-  { key: 'snake', name: 'SNAKE', short: 'SNAKE', color: '#F4F6F8', game: true, group: 'games' },
   { key: 'stack', name: 'STACK', short: 'STACK', color: '#F4F6F8', game: true, group: 'games' },
   { key: 'blackjack', name: 'BLACKJACK', short: 'BLACKJACK', color: '#F4F6F8', game: true, group: 'games' },
   { key: 'roulette', name: 'ROULETTE', short: 'ROULETTE', color: '#F4F6F8', game: true, group: 'games' },
-  // `multi`: a party game for phones, played with an arrow 'pad' or a 'touch' pad.
+  // `keyboard`: phones show a box for typing into it.
+  { key: 'wordle', name: 'WORDLE', short: 'WORDLE', color: '#F4F6F8', game: true, group: 'games', keyboard: true },
+  // `multi`: a party game for phones, played with an arrow 'pad', a 'touch' pad, the
+  // 'board' to tap, or 'choice' buttons.
+  { key: 'trivia', name: 'TRIVIA', short: 'TRIVIA', color: '#F4F6F8', game: true, group: 'games', multi: 'choice' },
+  { key: 'ttt', name: 'TIC TAC TOE', short: 'TIC TAC TOE', color: '#F4F6F8', game: true, group: 'games', multi: 'board' },
   { key: 'hockey', name: 'AIR HOCKEY', short: 'HOCKEY', color: '#F4F6F8', game: true, group: 'games', multi: 'touch' },
   { key: 'pong', name: 'PONG', short: 'PONG', color: '#F4F6F8', game: true, group: 'games', multi: 'touch' },
   { key: 'cycles', name: 'LIGHT CYCLES', short: 'CYCLES', color: '#F4F6F8', game: true, group: 'games', multi: 'pad' },
   { key: 'popeyes', name: 'POPEYES MENU', short: 'POPEYES', color: '#F26A1B', game: true },
 ];
 
-const DEFAULT_ON = ['hdmi1', 'hdmi2', 'hdmi3', 'hdmi4', 'heartive', 'youtube', 'netflix', 'flappy', 'dino', 'snake', 'stack', 'blackjack', 'roulette', 'hockey', 'pong', 'cycles', 'popeyes'];
+const DEFAULT_ON = ['hdmi1', 'hdmi2', 'hdmi3', 'hdmi4', 'heartive', 'youtube', 'netflix', 'flappy', 'dino', 'stack', 'blackjack', 'roulette', 'wordle', 'trivia', 'ttt', 'hockey', 'pong', 'cycles', 'popeyes'];

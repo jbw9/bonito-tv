@@ -12,6 +12,7 @@ App.screens.youtube = (() => {
     // uBlock Origin's json-prune rules for YouTube: drop the ad fields from every
     // response before the player sees them, plus ad tiles in feeds and Shorts.
     const AD_KEYS = ['adPlacements', 'adSlots', 'playerAds'];
+    let removed = 0;
     function isAd(x) {
       const reel = x && x.command && x.command.reelWatchEndpoint;
       return !!(x && (x.adSlotRenderer || (reel && reel.adClientParams && reel.adClientParams.isAd)));
@@ -20,25 +21,41 @@ App.screens.youtube = (() => {
       if (!o || typeof o !== 'object') return;
       if (Array.isArray(o)) {
         for (let i = o.length - 1; i >= 0; i--) {
-          if (isAd(o[i])) o.splice(i, 1);
+          if (isAd(o[i])) removed += o.splice(i, 1).length;
           else prune(o[i]);
         }
         return;
       }
       for (const k in o) {
-        if (AD_KEYS.indexOf(k) >= 0) delete o[k];
+        if (AD_KEYS.indexOf(k) >= 0) removed += delete o[k];
         else prune(o[k]);
       }
     }
+    // Ads are removed out of sight, so a corner notice shows the blocker at work.
+    let notice = null, hideAt = 0;
+    function clean(r) {
+      removed = 0;
+      prune(r);
+      if (!removed || !document.body) return r;
+      if (!notice) {
+        notice = document.createElement('div');
+        notice.style.cssText = 'position:fixed;top:40px;right:48px;z-index:99999;padding:12px 24px;border-radius:30px;' +
+          'background:#FF2A1F;color:#fff;font:bold 26px sans-serif;letter-spacing:2px;transition:opacity .4s';
+        notice.textContent = 'AD BLOCKED';
+        document.body.appendChild(notice);
+      }
+      notice.style.opacity = 1;
+      hideAt = Date.now() + 3000;
+      setTimeout(() => { if (Date.now() >= hideAt) notice.style.opacity = 0; }, 3000);
+      return r;
+    }
     const parse = JSON.parse;
     JSON.parse = function () {
-      const r = parse.apply(this, arguments);
-      prune(r);
-      return r;
+      return clean(parse.apply(this, arguments));
     };
     const json = Response.prototype.json;
     Response.prototype.json = function () {
-      return json.call(this).then(r => { prune(r); return r; });
+      return json.call(this).then(clean);
     };
 
     // Back on YouTube's home hides the app; here it returns to the launcher instead.
@@ -79,6 +96,20 @@ App.screens.youtube = (() => {
       });
   }
 
+  // Phones (js/remote.js) can't reach the frame the way the remote does, so their
+  // presses and typing are handed to YouTube as key events of its own.
+  const CODES = {
+    left: [37, 'ArrowLeft'], up: [38, 'ArrowUp'], right: [39, 'ArrowRight'], down: [40, 'ArrowDown'], ok: [13, 'Enter'],
+    back: Platform.isTV ? [10009, 'XF86Back'] : [27, 'Escape'],
+  };
+  function toFrame(type, code, key) {
+    const w = frame.contentWindow, d = frame.contentDocument;
+    const e = new w.KeyboardEvent(type, { key, keyCode: code, which: code, charCode: type === 'keypress' ? code : 0, bubbles: true, cancelable: true });
+    // Older browsers ignore keyCode in the constructor.
+    if (e.keyCode !== code) ['keyCode', 'which'].forEach(name => Object.defineProperty(e, name, { get: () => code }));
+    (d.activeElement || d.body).dispatchEvent(e);
+  }
+
   window.addEventListener('message', e => {
     if (e.data === 'youtube:exit' && frame && e.source === frame.contentWindow) App.home();
   });
@@ -102,9 +133,22 @@ App.screens.youtube = (() => {
       drawText(g, APP.name, W / 2, 400, 24, '#ffffff', { align: 'center' });
       drawText(g, status, W / 2, 618, 4, '#ffffff', { style: 'thin', align: 'center', alpha: 0.85 });
     },
-    // Only reached before YouTube has loaded; after that the remote talks to the frame.
+    // From the remote only before YouTube has loaded (then it talks to the frame); from
+    // phones always.
     key(k) {
-      if (k === 'back') App.home();
+      if (frame) toFrame('keydown', CODES[k][0], CODES[k][1]);
+      else if (k === 'back') App.home();
+    },
+    keyUp(k) {
+      if (frame) toFrame('keyup', CODES[k][0], CODES[k][1]);
+    },
+    // Phone typing, for YouTube's search: letters, '\b' to delete and '\n' to enter.
+    type(ch) {
+      if (!frame) return;
+      const [code, key] = ch === '\b' ? [8, 'Backspace'] : ch === '\n' ? [13, 'Enter'] : [ch.toUpperCase().charCodeAt(0), ch];
+      toFrame('keydown', code, key);
+      if (ch.length === 1 && ch >= ' ') toFrame('keypress', ch.charCodeAt(0), key);
+      toFrame('keyup', code, key);
     },
   };
   return screen;
