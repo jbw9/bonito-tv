@@ -167,6 +167,20 @@
     .choices button b { display: block; font-size: 13px; opacity: .8; margin-bottom: 4px; }
     .choices.locked button:not(.mine), .choices.shown button:not(.right) { opacity: .3; }
     .choices button.mine { box-shadow: inset 0 0 0 4px #fff; }
+    .race { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; width: min(72vw, 300px); margin: 16px auto 0; }
+    .race i { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 6px; box-shadow: inset 0 0 0 2px #3a3a3c; font-style: normal; font-size: 26px; font-weight: 800; }
+    .race i.c { background: #538d4e; box-shadow: none; }
+    .race i.p { background: #b59f3b; box-shadow: none; }
+    .race i.a { background: #3a3a3c; box-shadow: none; }
+    .race i.typed { box-shadow: inset 0 0 0 2px #878a8c; }
+    .wkeys { margin-top: 16px; }
+    .wkeys div { display: flex; justify-content: center; gap: 5px; margin-top: 6px; }
+    .wkeys button { flex: 1; max-width: 40px; height: 54px; border-radius: 6px; background: #818384; color: #fff; font-size: 17px; font-weight: 700; touch-action: manipulation; }
+    .wkeys button.wide { max-width: 64px; flex: 1.5; font-size: 13px; }
+    .wkeys button.c { background: #538d4e; }
+    .wkeys button.p { background: #b59f3b; }
+    .wkeys button.a { background: #3a3a3c; }
+    .race-msg { min-height: 18px; text-align: center; color: var(--sub); font-size: 14px; font-weight: 700; margin-top: 12px; }
     .hint { text-align: center; color: var(--dim); font-size: 13px; margin-top: 18px; }
 
     .on-tv { margin-top: 8px; padding: 16px; border-radius: 8px; background: var(--highlight); }
@@ -199,6 +213,7 @@
       <div id="game-kbd" hidden></div>
       <div id="game-board" hidden></div>
       <div id="game-choice" hidden></div>
+      <div id="game-word" hidden></div>
       <div id="game-list"></div>
     </section>
     <section id="tab-spotify" hidden>
@@ -989,6 +1004,91 @@
       box.append(el('div', 'hint', line + (me ? ' · ' + me.score + ' points' : '')), grid);
     }
 
+    // Wordle on the phone: the grid and Wordle's own keyboard, for solo and the race.
+    // Solo is played on the TV, so keys go over as typing and the grid comes back in the
+    // state. In the race the TV only knows the colours everyone has, so this phone keeps
+    // its own words: a guess counts once its row shows up in the state, and `miss` going
+    // up means the TV didn't know the word.
+    let race = { round: null, words: [], pending: null, miss: 0, draft: '', msg: '' }, wordState = null;
+    const wordMsg = el('div', 'race-msg'), wordGrid = el('div', 'race'), wordKeys = el('div', 'wkeys');
+    ['QWERTYUIOP', 'ASDFGHJKL', '+ZXCVBNM-'].forEach(row => {
+      const line = el('div');
+      row.split('').forEach(ch => {
+        const k = ch === '+' ? 'ENTER' : ch === '-' ? 'DEL' : ch;
+        const b = button(k.length > 1 ? 'wide' : '', k, () => { buzz(); wordKey(k); });
+        b.textContent = k === 'DEL' ? '⌫' : k === 'ENTER' ? 'Enter' : k;
+        b.dataset.k = k;
+        line.append(b);
+      });
+      wordKeys.append(line);
+    });
+    $('game-word').append(wordMsg, wordGrid, wordKeys);
+
+    function wordKey(k) {
+      const state = wordState;
+      if (!state) return;
+      if (state.mode === 'solo') return send('type', k === 'ENTER' ? { enter: true } : k === 'DEL' ? { back: 1 } : { text: k });
+      const me = mySeat();
+      if (state.mode !== 'play' || !me || me.solved || (me.rows || []).length === 6) return;
+      race.msg = '';
+      if (k === 'DEL') race.draft = race.draft.slice(0, -1);
+      else if (k !== 'ENTER') { if (race.draft.length < 5) race.draft += k; }
+      else if (race.pending) return;
+      else if (race.draft.length < 5) race.msg = 'Not enough letters';
+      else {
+        race.pending = race.draft;
+        race.draft = '';
+        send('guess', { id: ME, word: race.pending });
+      }
+      drawWord();
+    }
+
+    function renderWord(state) {
+      wordState = state;
+      const me = mySeat();
+      if (state.mode !== 'solo') {
+        if (state.round !== race.round) race = { round: state.round, words: [], pending: null, miss: (me && me.miss) || 0, draft: '', msg: '' };
+        if (me && me.rows) {
+          if (race.pending && me.rows.length > race.words.length) {
+            race.words.push(race.pending);
+            race.pending = null;
+          }
+          if (me.miss > race.miss) {
+            race.miss = me.miss;
+            if (race.pending && !race.draft) race.draft = race.pending;
+            race.pending = null;
+            race.msg = 'Not in word list';
+          }
+        }
+      }
+      drawWord();
+    }
+
+    function drawWord() {
+      const state = wordState;
+      if (!state) return;
+      const solo = state.mode === 'solo', me = mySeat();
+      if (!solo && !me) return;
+      const rows = (solo ? state.rows : me.rows) || [], words = solo ? state.words : race.words;
+      const finished = solo ? !!state.done : me.solved || rows.length === 6;
+      const draft = solo ? state.typed : race.pending || race.draft;
+      wordGrid.textContent = '';
+      for (let r = 0; r < 6; r++) {
+        const word = r < rows.length ? words[r] || '' : r === rows.length && !finished ? draft : '';
+        for (let c = 0; c < 5; c++) wordGrid.append(el('i', r < rows.length ? rows[r][c] : word[c] ? 'typed' : '', word[c] || ''));
+      }
+      // Keys take the best colour their letter has had.
+      const best = {}, rank = { a: 1, p: 2, c: 3 };
+      rows.forEach((m, r) => (words[r] || '').split('').forEach((ch, c) => { if ((rank[m[c]] || 0) > (rank[best[ch]] || 0)) best[ch] = m[c]; }));
+      wordKeys.querySelectorAll('button').forEach(b => { b.className = (b.dataset.k.length > 1 ? 'wide ' : '') + (best[b.dataset.k] || ''); });
+      if (solo) return void (wordMsg.textContent = state.msg || (state.done ? 'Tap Enter for a new word' : ' '));
+      const clock = s => Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+      const winner = state.players.find(p => p.id === state.winner);
+      wordMsg.textContent = state.mode === 'over' ? 'The word was ' + state.word + ' · ' + (winner ? (winner.id === ME ? 'You win!' : winner.name + ' wins') : 'Nobody got it')
+        : state.mode !== 'play' ? ''
+        : race.msg || (me.solved ? 'Got it in ' + rows.length + '! ' : finished ? 'Out of guesses. ' : '') + clock(state.left) + ' left';
+    }
+
     // Built once and only shown or hidden, so a finger on it never loses its button.
     $('remote-pad').append(dpad(sendKey));
     $('remote-pills').append(
@@ -1057,11 +1157,15 @@
       now.textContent = '';
       $('game-pad').hidden = !g || (g.multi && (g.multi !== 'pad' || !seat));
       $('game-touch').hidden = !g || g.multi !== 'touch' || !seat;
-      $('game-kbd').hidden = !g || !g.keyboard;
+      // Wordle has its own keyboard (game-word).
+      $('game-kbd').hidden = !g || !g.keyboard || !!g.multi;
       $('game-board').hidden = !g || g.multi !== 'board' || !seat;
       $('game-choice').hidden = !g || g.multi !== 'choice' || !seat;
+      const wordle = g && g.multi === 'wordle' && state && (state.mode === 'solo' || (seat && state.mode !== 'lobby' && state.mode !== 'pick'));
+      $('game-word').hidden = !wordle;
       if (seat && g.multi === 'board') renderBoard(state);
       if (seat && g.multi === 'choice') renderChoices(state);
+      if (wordle) renderWord(state);
       if (seat) document.documentElement.style.setProperty('--seat', seat.color);
       if (!tvLive()) {
         now.append(el('div', 'note', linked ? 'Open the launcher on the TV to play.' : 'Connecting to the TV…'));
@@ -1070,7 +1174,25 @@
       } else if (g) {
         const card = el('div', 'on-tv');
         card.append(el('small', null, 'On the TV'), el('b', null, titleCase(g.name)));
-        if (g.multi && state) {
+        if (state && state.mode === 'pick') {
+          const pills = el('div', 'pills');
+          pills.style.marginTop = '14px';
+          const choice = (label, cls, fn) => {
+            const b = button('pill' + cls, label, fn);
+            b.textContent = label;
+            return b;
+          };
+          pills.append(
+            choice('Solo', '', () => send('pick', { mode: 'solo' })),
+            choice('Multiplayer', ' go', () => {
+              wantSeat = true;
+              send('pick', { mode: 'race' });
+              setTimeout(() => send('join', { id: ME, name: playerName() }), 400);
+            }));
+          card.append(el('small', null, 'Play on your own, or race everyone on the same word.'), pills);
+        } else if (state && state.mode === 'solo') {
+          card.append(el('small', null, 'Tap the letters below.'));
+        } else if (g.multi && state) {
           state.players.forEach(p => {
             const row = el('div', 'seat');
             const dot = el('i');
@@ -1093,7 +1215,7 @@
             } else card.append(el('small', null, state.mode === 'lobby' ? 'All seats are taken.' : 'Round under way. Join when it ends.'));
           } else {
             card.style.boxShadow = 'inset 4px 0 0 ' + seat.color;
-            const how = { touch: 'Drag on the pad below to move.', pad: 'Steer with the arrows.', board: 'Tap a square on your turn.', choice: 'Tap your answer.' }[g.multi];
+            const how = { touch: 'Drag on the pad below to move.', pad: 'Steer with the arrows.', board: 'Tap a square on your turn.', choice: 'Tap your answer.', wordle: 'Same word for everyone. The TV only shows colours.' }[g.multi];
             card.append(el('small', null, state.mode === 'lobby' ? "You're " + seat.label.toLowerCase() + '. Start when everyone is in.' : how));
             const pills = el('div', 'pills');
             pills.style.marginTop = '14px';
@@ -1115,16 +1237,18 @@
       tv.games.forEach(game => {
         const row = button('game-row', 'Play ' + game.name, () => {
           // iOS only raises the keyboard for a focus made during a tap, so it's done here.
-          if (game.keyboard) {
+          if (game.keyboard && !game.multi) {
             $('game-kbd').hidden = false;
             $('game-kbd').firstChild.focus();
           }
-          wantSeat = !!game.multi;
+          // Wordle asks solo or multiplayer before anyone takes a seat.
+          const seats = game.multi && !game.keyboard;
+          wantSeat = seats;
           send('open', { game: game.key });
-          if (game.multi) setTimeout(() => send('join', { id: ME, name: playerName() }), 400);
+          if (seats) setTimeout(() => send('join', { id: ME, name: playerName() }), 400);
         });
         const meta = el('div', 'meta');
-        meta.append(el('div', 'name', titleCase(game.name)), el('div', 'sub', game.multi ? 'Party game: phones as controllers, or you vs the CPU' : game.keyboard ? 'Type with your phone' : 'Play with the pad'));
+        meta.append(el('div', 'name', titleCase(game.name)), el('div', 'sub', game.multi && game.keyboard ? 'Solo, or race your friends' : game.multi ? 'Party game: phones as controllers, or you vs the CPU' : game.keyboard ? 'Type with your phone' : 'Play with the pad'));
         row.append(meta);
         row.insertAdjacentHTML('beforeend', ICON.go);
         list.append(row);

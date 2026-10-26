@@ -69,7 +69,8 @@ function makeParty(title, max) {
       };
     },
 
-    drawLobby(g) {
+    // `phonesOnly`: the game needs a phone each, so the remote can't take a seat.
+    drawLobby(g, phonesOnly) {
       drawText(g, title, W / 2, 110, 12, '#ffffff', { align: 'center' });
       if (!partyQr && Phones.enabled()) partyQr = Jam.renderQr(qrMatrix(Phones.url('games')), null, 380);
       const slotsX = partyQr ? 900 : W / 2 - 360;
@@ -87,7 +88,7 @@ function makeParty(title, max) {
         if (p && p.wins) drawText(g, p.wins + (p.wins === 1 ? ' WIN' : ' WINS'), slotsX + 720, y, 6.5, p.color, { style: 'thin', align: 'right' });
       }
       const n = party.players.length;
-      const hint = n === 1 ? 'OK START VS CPU' : n ? 'OK START' : 'JOIN FROM A PHONE OR PRESS AN ARROW';
+      const hint = n === 1 ? 'OK START VS CPU' : n ? 'OK START' : phonesOnly ? 'JOIN FROM A PHONE' : 'JOIN FROM A PHONE OR PRESS AN ARROW';
       drawText(g, hint + '   BACK EXIT', W / 2, H - 150, 4, '#7d838c', { style: 'thin', align: 'center' });
     },
 

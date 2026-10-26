@@ -1,6 +1,34 @@
-// Wordle: six tries at a five-letter word. Type on a phone (js/remote.js) or pick
-// letters off the on-screen keyboard with the remote.
-App.screens.wordle = (() => {
+// Wordle on your own: six tries at a five-letter word. Type on a phone (js/remote.js) or
+// pick letters off the on-screen keyboard with the remote. The Wordle screen that offers
+// this or the race is in js/wordrace.js.
+
+// Shared with Wordle Race.
+function isWordleWord(w) {
+  const find = list => {
+    for (let i = 0; i < list.length; i += 5) if (list.substr(i, 5) === w) return true;
+    return false;
+  };
+  return find(WORDLE_ANSWERS) || find(WORDLE_GUESSES);
+}
+
+// 'correct', 'present' or 'absent' per letter. Greens first, then yellows from what's
+// left, so a repeated letter is only yellow as many times as the answer has it.
+function wordleMarks(answer, guess) {
+  const out = Array(5).fill('absent'), left = {};
+  for (let i = 0; i < 5; i++) {
+    if (guess[i] === answer[i]) out[i] = 'correct';
+    else left[answer[i]] = (left[answer[i]] || 0) + 1;
+  }
+  for (let i = 0; i < 5; i++) {
+    if (out[i] !== 'correct' && left[guess[i]]) {
+      out[i] = 'present';
+      left[guess[i]]--;
+    }
+  }
+  return out;
+}
+
+const WordleSolo = (() => {
   const TILE = 104, GAP = 12, GRID_X = 220, GRID_Y = 200;
   const KEY_W = 70, KEY_H = 80, KEY_GAP = 8, KB_X = 1000, KB_Y = 420;
   const COLORS = { correct: '#538d4e', present: '#b59f3b', absent: '#3a3a3c' };
@@ -23,31 +51,6 @@ App.screens.wordle = (() => {
 
   let answer, guesses, typed, marks, letters, row, col, msg, msgUntil, revealAt, done, pending;
   let stats = Platform.load('wordle', { played: 0, won: 0, streak: 0, best: 0 });
-
-  function isWord(w) {
-    const find = list => {
-      for (let i = 0; i < list.length; i += 5) if (list.substr(i, 5) === w) return true;
-      return false;
-    };
-    return find(WORDLE_ANSWERS) || find(WORDLE_GUESSES);
-  }
-
-  // Greens first, then yellows from what's left, so a repeated letter is only yellow
-  // as many times as the answer has it.
-  function score(guess) {
-    const out = Array(5).fill('absent'), left = {};
-    for (let i = 0; i < 5; i++) {
-      if (guess[i] === answer[i]) out[i] = 'correct';
-      else left[answer[i]] = (left[answer[i]] || 0) + 1;
-    }
-    for (let i = 0; i < 5; i++) {
-      if (out[i] !== 'correct' && left[guess[i]]) {
-        out[i] = 'present';
-        left[guess[i]]--;
-      }
-    }
-    return out;
-  }
 
   function newGame() {
     const n = Math.floor(Math.random() * WORDLE_ANSWERS.length / 5);
@@ -80,8 +83,8 @@ App.screens.wordle = (() => {
 
   function submit() {
     if (typed.length < 5) return say('NOT ENOUGH LETTERS', 1.5);
-    if (!isWord(typed)) return say('NOT IN WORD LIST', 1.5);
-    const m = score(typed);
+    if (!isWordleWord(typed)) return say('NOT IN WORD LIST', 1.5);
+    const m = wordleMarks(answer, typed);
     guesses.push(typed);
     marks.push(m);
     revealAt = clock;
@@ -167,13 +170,12 @@ App.screens.wordle = (() => {
     const pct = stats.played ? Math.round(stats.won / stats.played * 100) : 0;
     drawText(g, 'PLAYED ' + stats.played + '   WON ' + pct + '%   STREAK ' + stats.streak + '   BEST ' + stats.best,
       mid, KB_Y + 3 * (KEY_H + KEY_GAP) + 50, 3.5, '#9aa0a8', { style: 'thin', align: 'center' });
-    const hint = done ? 'OK NEW WORD   BACK EXIT' : 'TYPE ON YOUR PHONE OR PICK LETTERS   BACK EXIT';
+    const hint = done ? 'OK NEW WORD   BACK MENU' : 'TYPE ON YOUR PHONE OR PICK LETTERS   BACK MENU';
     drawText(g, hint, mid, KB_Y + 3 * (KEY_H + KEY_GAP) + 110, 3.5, '#5d636c', { style: 'thin', align: 'center' });
     drawLightBar(g);
   }
 
   function key(k, repeat) {
-    if (k === 'back') return App.home();
     if (done && k === 'ok' && !repeat) return newGame();
     const here = KEYS[row][col];
     if (k === 'left') col = (col + KEYS[row].length - 1) % KEYS[row].length;
@@ -199,5 +201,11 @@ App.screens.wordle = (() => {
     newGame();
   }
 
-  return { enter, update, draw, key, type };
+  // For the phone's own Wordle (grid and keyboard): letters, colours and what's typed.
+  function phoneState() {
+    const code = { correct: 'c', present: 'p', absent: 'a' };
+    return { words: guesses, rows: marks.map(m => m.map(x => code[x]).join('')), typed, done: !!done, msg: msg && clock < msgUntil ? msg : '' };
+  }
+
+  return { enter, update, draw, key, type, phoneState };
 })();

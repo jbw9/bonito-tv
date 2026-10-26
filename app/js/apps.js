@@ -25,10 +25,10 @@ const CATALOG = [
   { key: 'stack', name: 'STACK', short: 'STACK', color: '#F4F6F8', game: true, group: 'games' },
   { key: 'blackjack', name: 'BLACKJACK', short: 'BLACKJACK', color: '#F4F6F8', game: true, group: 'games' },
   { key: 'roulette', name: 'ROULETTE', short: 'ROULETTE', color: '#F4F6F8', game: true, group: 'games' },
-  // `keyboard`: phones show a box for typing into it.
-  { key: 'wordle', name: 'WORDLE', short: 'WORDLE', color: '#F4F6F8', game: true, group: 'games', keyboard: true },
+  // `keyboard`: phones show a box for typing into it. Wordle is solo or a party game.
+  { key: 'wordle', name: 'WORDLE', short: 'WORDLE', color: '#F4F6F8', game: true, group: 'games', keyboard: true, multi: 'wordle' },
   // `multi`: a party game for phones, played with an arrow 'pad', a 'touch' pad, the
-  // 'board' to tap, or 'choice' buttons.
+  // 'board' to tap, 'choice' buttons, or a 'wordle' guess box.
   { key: 'trivia', name: 'TRIVIA', short: 'TRIVIA', color: '#F4F6F8', game: true, group: 'games', multi: 'choice' },
   { key: 'ttt', name: 'TIC TAC TOE', short: 'TIC TAC TOE', color: '#F4F6F8', game: true, group: 'games', multi: 'board' },
   { key: 'hockey', name: 'AIR HOCKEY', short: 'HOCKEY', color: '#F4F6F8', game: true, group: 'games', multi: 'touch' },
