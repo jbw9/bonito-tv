@@ -50,7 +50,7 @@ create extension if not exists pg_cron with schema pg_catalog;
 select cron.schedule('jam-cleanup', '17 * * * *', $$delete from public.jam where kind <> 'state' and created_at < now() - interval '1 day'$$);
 
 -- Ideas board on the website (index.html): anyone can post an idea and vote for one.
--- Votes only go up, one at a time, through vote_idea. To take down spam, set `hidden`
+-- Votes move one at a time, through vote_idea and unvote_idea. To take down spam, set `hidden`
 -- in the Table Editor.
 create table if not exists public.ideas (
   id bigint generated always as identity primary key,
@@ -74,3 +74,9 @@ create or replace function public.vote_idea(idea bigint) returns integer
 $$;
 revoke all on function public.vote_idea(bigint) from public;
 grant execute on function public.vote_idea(bigint) to anon;
+create or replace function public.unvote_idea(idea bigint) returns integer
+  language sql security definer set search_path = public as $$
+  update public.ideas set votes = greatest(votes - 1, 0) where id = idea and not hidden returning votes;
+$$;
+revoke all on function public.unvote_idea(bigint) from public;
+grant execute on function public.unvote_idea(bigint) to anon;

@@ -257,7 +257,7 @@
     }
     .vote b { font: 900 20px/1 var(--dot); color: var(--paper); }
     .vote[aria-pressed="true"] { border-color: var(--standby); color: var(--standby); }
-    .vote:disabled { cursor: default; }
+    .vote:disabled { cursor: wait; }
     .idea p { margin: 0; overflow-wrap: anywhere; }
     .idea small { display: block; margin-top: 4px; color: var(--dusk); font-size: 13px; }
     .empty { color: var(--mist); }
@@ -651,7 +651,7 @@
 
     // ---- ideas board ----------------------------------------------------------------
     // The `ideas` table in supabase.sql. Votes are remembered in this browser so a click
-    // counts once; the database only lets them go up by one.
+    // counts once, and a second click takes it back; the database moves them by one.
     const DB = CONFIG.supabaseUrl + '/rest/v1/';
     const HEADERS = { apikey: CONFIG.supabaseKey, Authorization: 'Bearer ' + CONFIG.supabaseKey, 'Content-Type': 'application/json' };
     let voted = [];
@@ -677,13 +677,9 @@
         const li = document.createElement('li');
         li.className = 'idea';
         li.innerHTML = '<button class="vote"><b></b><span>votes</span></button><div><p></p><small></small></div>';
-        const v = li.querySelector('.vote'), mine = voted.indexOf(idea.id) >= 0;
-        v.querySelector('b').textContent = idea.votes;
-        v.querySelector('span').textContent = idea.votes === 1 ? 'vote' : 'votes';
-        v.setAttribute('aria-pressed', mine);
-        v.setAttribute('aria-label', mine ? 'You voted for this' : 'Vote for this idea');
-        v.disabled = mine;
+        const v = li.querySelector('.vote');
         v.onclick = () => vote(idea, v);
+        showVote(idea, v);
         li.querySelector('p').textContent = idea.text;
         li.querySelector('small').textContent = (idea.name ? idea.name + ', ' : '') + ago(idea.created_at);
         list.append(li);
@@ -697,20 +693,27 @@
         .catch(() => { $('idea-list').innerHTML = '<li class="empty">The ideas board couldn\'t load. Try again in a minute.</li>'; });
     }
 
+    function showVote(idea, button) {
+      const mine = voted.indexOf(idea.id) >= 0;
+      button.querySelector('b').textContent = idea.votes;
+      button.querySelector('span').textContent = idea.votes === 1 ? 'vote' : 'votes';
+      button.setAttribute('aria-pressed', mine);
+      button.setAttribute('aria-label', mine ? 'Take back your vote' : 'Vote for this idea');
+    }
+
     function vote(idea, button) {
+      const undo = voted.indexOf(idea.id) >= 0;
       button.disabled = true;
-      fetch(DB + 'rpc/vote_idea', { method: 'POST', headers: HEADERS, body: JSON.stringify({ idea: idea.id }) })
+      fetch(DB + 'rpc/' + (undo ? 'unvote_idea' : 'vote_idea'), { method: 'POST', headers: HEADERS, body: JSON.stringify({ idea: idea.id }) })
         .then(r => r.ok ? r.json() : Promise.reject(r.status))
         .then(votes => {
-          voted.push(idea.id);
+          voted = undo ? voted.filter(id => id !== idea.id) : voted.concat(idea.id);
           try { localStorage.setItem('voted', JSON.stringify(voted)); } catch (e) {}
           idea.votes = votes;
-          button.querySelector('b').textContent = votes;
-          button.querySelector('span').textContent = votes === 1 ? 'vote' : 'votes';
-          button.setAttribute('aria-pressed', true);
-          button.setAttribute('aria-label', 'You voted for this');
+          showVote(idea, button);
         })
-        .catch(() => { button.disabled = false; });
+        .catch(() => {})
+        .then(() => { button.disabled = false; });
     }
 
     $('idea-form').onsubmit = e => {
