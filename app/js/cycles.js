@@ -1,13 +1,10 @@
-// Light cycles for 2-4. Phones join from the jam page's Games tab (js/remote.js) and
-// steer with its pad; arrows on the TV remote take a seat too. Anyone playing alone
-// gets a CPU rival. Last one riding wins the round.
+// Light cycles for 2-4, steered with the phone's arrow pad (seats: js/party.js).
+// Last one riding wins the round.
 App.screens.cycles = (() => {
   const CELL = 18, COLS = 96, ROWS = 44, X0 = (W - COLS * CELL) / 2, Y0 = 140;
   const STEP = { slow: 0.1, normal: 0.08, fast: 0.065 }; // seconds per move
   const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
-  const COLORS = [['CYAN', '#38C6F4'], ['ORANGE', '#FF7A1A'], ['PINK', '#FF4FA3'], ['YELLOW', '#FFD60A']];
   const STARTS = [[12, 11, 'right'], [COLS - 13, ROWS - 12, 'left'], [12, ROWS - 12, 'right'], [COLS - 13, 11, 'left']];
-  const QR_FIT = 380;
 
   const arena = makeCanvas(COLS * CELL, ROWS * CELL, b => {
     b.fillStyle = 'rgba(255,255,255,0.05)';
@@ -16,37 +13,18 @@ App.screens.cycles = (() => {
   });
   const trail = makeCanvas(COLS * CELL, ROWS * CELL, () => {});
 
-  // players: { id, name, color, label, cpu, wins, x, y, dir, turns, alive }
-  let mode = 'lobby', players = [], grid, wait, timer, winner, flash = 0, qr = null;
+  const party = makeParty('LIGHT CYCLES', 4);
+  // Each of party.players also gets x, y, dir, turns and alive for the round.
+  let mode = 'lobby', grid, wait, timer, winner, flash = 0;
 
   const opposite = (a, b) => DIRS[a][0] === -DIRS[b][0] && DIRS[a][1] === -DIRS[b][1];
   const blocked = (x, y) => x < 0 || y < 0 || x >= COLS || y >= ROWS || grid[y * COLS + x] > 0;
 
-  function join(id, name) {
-    name = String(name || '').toUpperCase().slice(0, 12);
-    const p = players.find(q => q.id === id);
-    if (p) {
-      if (name) p.name = name;
-      return;
-    }
-    if (mode !== 'lobby' || players.length >= COLORS.length) return;
-    const free = COLORS.find(c => !players.some(q => q.color === c[1]));
-    players.push({ id, name: name || free[0], label: free[0], color: free[1], wins: 0 });
-  }
-
-  function toLobby() {
-    mode = 'lobby';
-    players = players.filter(p => !p.cpu);
-  }
-
   function startRound() {
-    if (!players.length) return;
-    if (players.length === 1) join('cpu', 'CPU');
-    const cpu = players.find(p => p.id === 'cpu');
-    if (cpu) cpu.cpu = true;
+    if (!party.begin()) return;
     grid = new Uint8Array(COLS * ROWS);
     trail.getContext('2d').clearRect(0, 0, trail.width, trail.height);
-    players.forEach((p, i) => {
+    party.players.forEach((p, i) => {
       const [x, y, dir] = STARTS[i];
       Object.assign(p, { x, y, dir, turns: [], alive: true });
       mark(p, x, y);
@@ -100,7 +78,7 @@ App.screens.cycles = (() => {
   }
 
   function step() {
-    const live = players.filter(p => p.alive);
+    const live = party.players.filter(p => p.alive);
     live.forEach(p => {
       if (p.cpu) steer(p);
       else if (p.turns.length) p.dir = p.turns.shift();
@@ -120,7 +98,7 @@ App.screens.cycles = (() => {
       mark(p, fx, fy);
     });
     if (crashed.length) flash = 0.5;
-    const left = players.filter(p => p.alive);
+    const left = party.players.filter(p => p.alive);
     if (left.length > 1) return;
     winner = left[0] || null;
     if (winner) winner.wins++;
@@ -148,24 +126,9 @@ App.screens.cycles = (() => {
     }
   }
 
-  function drawLobby(g) {
-    drawText(g, 'LIGHT CYCLES', W / 2, 110, 12, '#ffffff', { align: 'center' });
-    const slotsX = qr ? 900 : W / 2 - 360;
-    if (qr) {
-      g.drawImage(qr, 480 - qr.width / 2, 300);
-      drawText(g, 'SCAN TO JOIN', 480, 300 + qr.height + 30, 4.5, '#d3d7dd', { style: 'thin', align: 'center' });
-    }
-    COLORS.forEach((c, i) => {
-      const p = players[i], y = 320 + i * 110;
-      g.fillStyle = p ? p.color : 'rgba(255,255,255,0.12)';
-      g.beginPath();
-      g.arc(slotsX, y + 3.5 * 6.5, 16, 0, Math.PI * 2);
-      g.fill();
-      drawText(g, p ? p.name : 'OPEN SEAT', slotsX + 50, y, 6.5, p ? '#ffffff' : '#5d636c', { style: 'thin' });
-      if (p && p.wins) drawText(g, p.wins + (p.wins === 1 ? ' WIN' : ' WINS'), slotsX + 720, y, 6.5, p.color, { style: 'thin', align: 'right' });
-    });
-    const hint = players.length === 1 ? 'OK START VS CPU' : players.length ? 'OK START' : 'JOIN FROM A PHONE OR PRESS AN ARROW';
-    drawText(g, hint + '   BACK EXIT', W / 2, H - 150, 4, '#7d838c', { style: 'thin', align: 'center' });
+  function toLobby() {
+    mode = 'lobby';
+    party.toLobby();
   }
 
   function drawArena(g) {
@@ -174,6 +137,7 @@ App.screens.cycles = (() => {
     g.strokeRect(X0 - 4, Y0 - 4, COLS * CELL + 8, ROWS * CELL + 8);
     g.drawImage(arena, X0, Y0);
     g.drawImage(trail, X0, Y0);
+    const players = party.players;
     players.forEach(p => {
       const x = X0 + p.x * CELL, y = Y0 + p.y * CELL;
       g.fillStyle = p.alive ? '#ffffff' : 'rgba(255,255,255,0.3)';
@@ -192,15 +156,13 @@ App.screens.cycles = (() => {
         drawText(g, p.name, X0 + p.x * CELL + (p.dir === 'left' ? -20 : 40), Y0 + p.y * CELL - 4, 3.5, p.color, { style: 'thin', align: p.dir === 'left' ? 'right' : 'left' });
       });
     } else if (mode === 'over') {
-      g.fillStyle = 'rgba(0,0,0,0.6)';
-      g.fillRect(0, H / 2 - 110, W, 220);
-      drawText(g, winner ? winner.name + ' WINS' : 'DRAW', W / 2, H / 2 - 49, 14, winner ? winner.color : '#ffffff', { align: 'center' });
+      party.drawWinner(g, winner ? winner.name + ' WINS' : 'DRAW', winner ? winner.color : '#ffffff');
     }
   }
 
   function draw(g) {
     drawBackground(g, '#191c22', '#0c0e11');
-    if (mode === 'lobby') drawLobby(g);
+    if (mode === 'lobby') party.drawLobby(g);
     else drawArena(g);
     drawLightBar(g);
     if (flash > 0) {
@@ -210,32 +172,23 @@ App.screens.cycles = (() => {
   }
 
   function key(k, repeat) {
-    if (mode === 'lobby') {
-      if (k === 'back') App.home();
-      else if (k === 'ok' && !repeat) startRound();
-      else if (DIRS[k]) join('tv', 'REMOTE');
-    } else if (k === 'back') toLobby();
+    if (mode === 'lobby') party.lobbyKey(k, repeat, startRound);
+    else if (k === 'back') toLobby();
     else if (mode === 'over' && k === 'ok') toLobby();
-    else turn(players.find(p => p.id === 'tv'), k);
+    else turn(party.find('tv'), k);
   }
 
-  // Events from phones (js/remote.js).
   function phone(event, p) {
-    if (event === 'join') join(p.id, p.name);
-    else if (event === 'leave' && mode === 'lobby') players = players.filter(q => q.id !== p.id);
-    else if (event === 'pad') turn(players.find(q => q.id === p.id), p.k);
-    else if (event === 'start' && mode === 'lobby') startRound();
+    if (!party.phone(event, p, startRound) && event === 'pad') turn(party.find(p.id), p.k);
   }
 
   function phoneState() {
-    return { mode, players: players.map(p => ({ id: p.id, name: p.name, label: p.label, color: p.color, wins: p.wins, alive: p.alive !== false })) };
+    return party.state(mode);
   }
 
-  // Seats start empty; phones still on the Games tab take theirs again by themselves.
   function enter() {
     mode = 'lobby';
-    players = [];
-    if (!qr && Phones.enabled()) qr = Jam.renderQr(qrMatrix(Phones.url('games')), null, QR_FIT);
+    party.reset();
   }
 
   return { enter, update, draw, key, phone, phoneState };

@@ -22,12 +22,15 @@ App.screens.home = (() => {
 
   const FOLDER = { key: 'games', name: 'GAMES', color: '#F4F6F8' };
   const SETTINGS = { key: 'settings', name: 'SETTINGS', color: '#F4F6F8' };
+  const CONNECT = { key: 'connect', name: 'CONNECT PHONE', color: '#1DB954' };
+  const QR_FIT = 460;
+  let qr = null; // the phone page's QR code, made the first time CONNECT PHONE is selected
   const LOGO_W = 280, LOGO_H = 140;
 
   let sel = 0, focus = 'list', scrollPos = 0, weather = null, nextFetch = 0, open = false;
 
   // Home rows: the enabled apps, with the games collapsed into one GAMES folder
-  // that lists them underneath while open, and SETTINGS always last.
+  // that lists them underneath while open, then CONNECT PHONE (when set up) and SETTINGS.
   function rows() {
     const out = [];
     playableApps().forEach(app => {
@@ -35,6 +38,7 @@ App.screens.home = (() => {
       if (!out.some(r => r.folder)) out.push({ app: FOLDER, folder: true });
       if (open) out.push({ app, child: true });
     });
+    if (Phones.enabled()) out.push({ app: CONNECT, connect: true });
     out.push({ app: SETTINGS, settings: true });
     return out;
   }
@@ -162,10 +166,16 @@ App.screens.home = (() => {
       drawIcon(g, ic, right - w - 30 - ic[0].length * 5, 410 + 3.5 * 6 - 3.5 * 5, 5, '#ffffff');
     }
 
-    const logo = LOGOS[list[sel].app.key];
-    if (logo) drawLogo(g, logo, right, 590);
+    // CONNECT PHONE shows the phone page's QR code where the app logo goes.
+    if (list[sel].connect) {
+      if (!qr) qr = Jam.renderQr(qrMatrix(Phones.url()), null, QR_FIT);
+      g.drawImage(qr, right - qr.width, 470);
+      drawText(g, 'REMOTE, SPOTIFY AND GAMES', right - qr.width / 2, 470 + qr.height + 26, 3.5, '#d3d7dd', { style: 'thin', align: 'center' });
+    } else {
+      const logo = LOGOS[list[sel].app.key];
+      if (logo) drawLogo(g, logo, right, 590);
+    }
 
-    if (focus === 'music') Jam.drawCode(g);
     Music.draw(g, focus === 'music');
 
     drawLightBar(g);

@@ -149,6 +149,9 @@
     .pill { height: 48px; padding: 0 26px; border-radius: 999px; background: var(--highlight); font-weight: 700; font-size: 15px; }
     .pill:active, .pill.held { background: #3e3e3e; }
     .pill.go { background: var(--green); color: #000; }
+    .touchpad { position: relative; width: 100%; aspect-ratio: 1; margin: 20px 0 8px; border-radius: 16px; background: var(--highlight); touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; overflow: hidden; }
+    .touchpad::after { content: 'Drag to move'; position: absolute; left: 0; right: 0; bottom: 14px; text-align: center; color: var(--dim); font-size: 13px; pointer-events: none; }
+    .touchpad i { position: absolute; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%; background: var(--seat, var(--green)); opacity: .9; pointer-events: none; }
     .hint { text-align: center; color: var(--dim); font-size: 13px; margin-top: 18px; }
 
     .on-tv { margin-top: 8px; padding: 16px; border-radius: 8px; background: var(--highlight); }
@@ -175,6 +178,7 @@
       <div class="top"><div class="bar"><h1>Games</h1><div class="device" id="device-games"></div></div></div>
       <div id="game-now"></div>
       <div id="game-pad" hidden></div>
+      <div id="game-touch" hidden></div>
       <div id="game-list"></div>
     </section>
     <section id="tab-spotify" hidden>
@@ -880,6 +884,41 @@
       else if (tv.game.mode === 'lobby') send('start');
     }));
 
+    // A touch pad for the table or court as the TV shows it: sends where the finger is,
+    // 0-1 across and down, at most 15 times a second (Realtime caps messages).
+    function touchpad() {
+      const box = el('div', 'touchpad'), dot = el('i');
+      let down = false, pos = null, last = 0, timer = null;
+      dot.style.left = dot.style.top = '50%';
+      box.append(dot);
+      const flush = () => {
+        timer = null;
+        last = Date.now();
+        send('touch', { id: ME, x: pos.x, y: pos.y });
+      };
+      const move = e => {
+        const r = box.getBoundingClientRect(), f = v => Math.round(Math.max(0, Math.min(1, v)) * 1000) / 1000;
+        pos = { x: f((e.clientX - r.left) / r.width), y: f((e.clientY - r.top) / r.height) };
+        dot.style.left = pos.x * 100 + '%';
+        dot.style.top = pos.y * 100 + '%';
+        if (timer) return;
+        const due = last + 66 - Date.now();
+        if (due <= 0) flush();
+        else timer = setTimeout(flush, due);
+      };
+      box.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        box.setPointerCapture(e.pointerId);
+        down = true;
+        move(e);
+      });
+      box.addEventListener('pointermove', e => { if (down) move(e); });
+      box.addEventListener('pointerup', () => { down = false; });
+      box.addEventListener('pointercancel', () => { down = false; });
+      return box;
+    }
+    $('game-touch').append(touchpad());
+
     let gamesJson = '';
     function renderGames() {
       renderLink();
@@ -894,7 +933,9 @@
 
       const now = $('game-now');
       now.textContent = '';
-      $('game-pad').hidden = !g || (g.multi && !seat);
+      $('game-pad').hidden = !g || g.multi === 'touch' || (g.multi && !seat);
+      $('game-touch').hidden = !g || g.multi !== 'touch' || !seat;
+      if (seat) document.documentElement.style.setProperty('--seat', seat.color);
       if (!tvLive()) {
         now.append(el('div', 'note', linked ? 'Open the launcher on the TV to play.' : 'Connecting to the TV…'));
       } else if (g) {
@@ -923,10 +964,15 @@
             } else card.append(el('small', null, state.mode === 'lobby' ? 'All four seats are taken.' : 'Round under way. Join when it ends.'));
           } else {
             card.style.boxShadow = 'inset 4px 0 0 ' + seat.color;
-            card.append(el('small', null, state.mode === 'lobby' ? "You're " + seat.label.toLowerCase() + '. Press OK to start.' : 'Steer with the arrows.'));
+            const how = g.multi === 'touch' ? 'Drag on the pad below to move.' : 'Steer with the arrows.';
+            card.append(el('small', null, state.mode === 'lobby' ? "You're " + seat.label.toLowerCase() + '. Start when everyone is in.' : how));
             const pills = el('div', 'pills');
             pills.style.marginTop = '14px';
-            if (state.mode === 'lobby') pills.append(pill('Leave', () => { wantSeat = false; send('leave', { id: ME }); }));
+            if (state.mode === 'lobby') {
+              pills.append(
+                pill('Start', () => send('start'), 'go'),
+                pill('Leave', () => { wantSeat = false; send('leave', { id: ME }); }));
+            }
             card.append(pills);
           }
         }
@@ -944,7 +990,7 @@
           if (game.multi) setTimeout(() => send('join', { id: ME, name: playerName() }), 400);
         });
         const meta = el('div', 'meta');
-        meta.append(el('div', 'name', titleCase(game.name)), el('div', 'sub', game.multi ? '2-4 players, phones as controllers' : 'Play with the pad'));
+        meta.append(el('div', 'name', titleCase(game.name)), el('div', 'sub', game.multi ? 'Party game: up to 4 phones, or you vs the CPU' : 'Play with the pad'));
         row.append(meta);
         row.insertAdjacentHTML('beforeend', ICON.go);
         list.append(row);

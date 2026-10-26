@@ -11,7 +11,7 @@ const Jam = (() => {
   const ROOM = 'HOME';
   const QR_SIZE = 760;
   const HANDOFF_MS = 20000; // ticks run every 5s, so this leaves room for a slow one
-  let qr = null, lastId = 0, stateId = 0, stateJson = '', busy = false, ticking = false, toast = null;
+  let lastId = 0, stateId = 0, stateJson = '', busy = false, ticking = false, toast = null;
   let search = null; // app-only catalogue token for the phone, see Music.catalogToken
   const REPEAT = ['off', 'context', 'track'];
   let picks = Platform.load('jam-picks', []); // [{ id, uri, name, artist, image, by, handed }]
@@ -233,11 +233,6 @@ const Jam = (() => {
 
   function start() {
     if (!enabled()) return;
-    const matrix = qrMatrix(CONFIG.jamUrl);
-    qr = renderQr(matrix);
-    const logo = new Image();
-    logo.onload = () => { qr = renderQr(matrix, logo); };
-    logo.src = 'img/logos/spotify.png';
     Promise.all([
       // Requests left from before the launcher opened are skipped.
       db('GET', 'jam?select=id&order=id.desc&limit=1&kind=neq.state&code=eq.' + ROOM),
@@ -252,17 +247,6 @@ const Jam = (() => {
     }).catch(err => console.error('jam', err.message));
   }
 
-  // Home screen, while the Spotify corner is focused: the QR code over the whole screen,
-  // clear of the Spotify row at the bottom.
-  function drawCode(g) {
-    if (!qr) return;
-    g.fillStyle = 'rgba(0,0,0,0.88)';
-    g.fillRect(0, 0, W, H);
-    const y = (H - 150 - qr.height) / 2;
-    g.drawImage(qr, (W - qr.width) / 2, y);
-    drawText(g, 'SCAN FOR REMOTE, SPOTIFY AND GAMES', W / 2, y + qr.height + 24, 3.5, '#d3d7dd', { style: 'thin', align: 'center' });
-  }
-
   // Every screen: who just added what, above the now-playing line.
   function draw(g) {
     if (!toast || Date.now() > toast.until) return;
@@ -271,5 +255,5 @@ const Jam = (() => {
     drawText(g, text.length > 40 ? text.slice(0, 38).trim() + '..' : text, 88, H - 140, 4, '#ffffff', { style: 'thin' });
   }
 
-  return { start, draw, drawCode, renderQr };
+  return { start, draw, renderQr };
 })();

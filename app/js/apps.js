@@ -26,9 +26,11 @@ const CATALOG = [
   { key: 'stack', name: 'STACK', short: 'STACK', color: '#F4F6F8', game: true, group: 'games' },
   { key: 'blackjack', name: 'BLACKJACK', short: 'BLACKJACK', color: '#F4F6F8', game: true, group: 'games' },
   { key: 'roulette', name: 'ROULETTE', short: 'ROULETTE', color: '#F4F6F8', game: true, group: 'games' },
-  { key: 'cycles', name: 'LIGHT CYCLES', short: 'CYCLES', color: '#F4F6F8', game: true, group: 'games', multi: true },
-  { key: 'dice', name: 'DICE', short: 'DICE', color: '#F4F6F8', game: true, group: 'games' },
+  // `multi`: a party game for phones, played with an arrow 'pad' or a 'touch' pad.
+  { key: 'hockey', name: 'AIR HOCKEY', short: 'HOCKEY', color: '#F4F6F8', game: true, group: 'games', multi: 'touch' },
+  { key: 'pong', name: 'PONG', short: 'PONG', color: '#F4F6F8', game: true, group: 'games', multi: 'touch' },
+  { key: 'cycles', name: 'LIGHT CYCLES', short: 'CYCLES', color: '#F4F6F8', game: true, group: 'games', multi: 'pad' },
   { key: 'popeyes', name: 'POPEYES MENU', short: 'POPEYES', color: '#F26A1B', game: true },
 ];
 
-const DEFAULT_ON = ['hdmi1', 'hdmi2', 'hdmi3', 'hdmi4', 'heartive', 'youtube', 'netflix', 'flappy', 'dino', 'snake', 'stack', 'blackjack', 'roulette', 'dice', 'cycles', 'popeyes'];
+const DEFAULT_ON = ['hdmi1', 'hdmi2', 'hdmi3', 'hdmi4', 'heartive', 'youtube', 'netflix', 'flappy', 'dino', 'snake', 'stack', 'blackjack', 'roulette', 'hockey', 'pong', 'cycles', 'popeyes'];

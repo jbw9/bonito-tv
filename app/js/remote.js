@@ -69,7 +69,7 @@ const Phones = (() => {
   function publish() {
     const state = {
       screen: Object.keys(App.screens).find(n => App.screens[n] === App.current),
-      games: playableApps().filter(a => a.group === 'games').map(a => ({ key: a.key, name: a.name, multi: !!a.multi })),
+      games: playableApps().filter(a => a.group === 'games').map(a => ({ key: a.key, name: a.name, multi: a.multi || false })),
       game: App.current.phoneState ? App.current.phoneState() : null,
     };
     const json = JSON.stringify(state);
