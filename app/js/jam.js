@@ -136,6 +136,7 @@ const Jam = (() => {
     next: () => ['POST', '/me/player/next'],
     shuffle: op => ['PUT', '/me/player/shuffle?state=' + !!op.to],
     repeat: op => ['PUT', '/me/player/repeat?state=' + (REPEAT.includes(op.to) ? op.to : 'off')],
+    context: op => ['PUT', '/me/player/play', { context_uri: op.uri }],
   };
 
   // A tick already under way read the player before the change, so wait for it.
@@ -144,11 +145,79 @@ const Jam = (() => {
   }
 
   function controlPlayer(row, op) {
-    const [method, path] = CONTROLS[op.op](op);
-    return Music.api(method, path)
+    const [method, path, body] = CONTROLS[op.op](op);
+    return Music.api(method, path, body)
       .then(() => new Promise(done => setTimeout(done, 700)))
       .then(freshTick)
       .then(() => answer(row.id, { ok: true }));
+  }
+
+  // Guests browse the account's own music, like Spotify's home screen. Spotify gives
+  // apps none of its own mixes or recommendations, so these are the closest it allows.
+  // Kept for a few minutes, since every phone asks when it opens the page.
+  let shelves = null;
+  function library() {
+    if (shelves && Date.now() - shelves.at < 5 * 60e3) return Promise.resolve(shelves);
+    // A shelf the login has no permission for (a login from before these were asked
+    // for) is left out.
+    const get = path => Music.api('GET', path).catch(() => null);
+    return Promise.all([
+      get('/me'),
+      get('/me/player/recently-played?limit=50'),
+      get('/me/top/tracks?limit=20&time_range=short_term'),
+      get('/me/top/artists?limit=12&time_range=short_term'),
+      get('/me/tracks?limit=1'),
+      get('/me/playlists?limit=50'),
+    ]).then(([me, recent, top, artists, liked, lists]) => {
+      const seen = {};
+      shelves = {
+        at: Date.now(),
+        recent: recent ? recent.items.map(i => trackInfo(i.track)).filter(t => !seen[t.uri] && (seen[t.uri] = true)).slice(0, 20) : [],
+        top: top ? top.items.map(t => trackInfo(t)) : [],
+        artists: artists ? artists.items.map(a => ({ name: a.name, image: (a.images[1] || a.images[0] || {}).url })) : [],
+        // Only playlists the account owns or collaborates on: Spotify won't share the
+        // songs of any other.
+        lists: (liked && liked.total ? [{ id: 'liked', name: 'Liked Songs', count: liked.total }] : []).concat(me && lists
+          ? lists.items.filter(p => p && (p.owner.id === me.id || p.collaborative)).map(p => ({
+            id: p.id, name: p.name, image: ((p.images || [])[0] || {}).url, count: (p.items || p.tracks || {}).total,
+          }))
+          : []),
+      };
+      return shelves;
+    });
+  }
+
+  // One page of Liked Songs, a playlist, or an album (from a guest's pasted link).
+  function listPage(op) {
+    const offset = Math.max(0, op.offset | 0), m = /^(album:)?([A-Za-z0-9]{22})$/.exec(op.id);
+    const page = (items, more, info) => Object.assign({
+      tracks: items.filter(t => t && t.type === 'track' && !t.is_local).map(t => trackInfo(t)),
+      next: more ? offset + 50 : null,
+    }, info);
+    if (op.id === 'liked') {
+      return Music.api('GET', '/me/tracks?limit=50&offset=' + offset).then(d => page(d.items.map(i => i.track), d.next));
+    }
+    if (!m) return Promise.reject(new Error('Unknown list'));
+    if (m[1]) {
+      return Music.api('GET', '/albums/' + m[2]).then(a => page(a.tracks.items.map(t => Object.assign(t, { album: a })), false,
+        { name: a.name, image: (a.images[0] || {}).url, uri: a.uri, sub: 'Album • ' + a.artists[0].name }));
+    }
+    return Promise.all([
+      offset ? null : Music.api('GET', '/playlists/' + m[2] + '?fields=name,images,uri').catch(() => null),
+      Music.api('GET', '/playlists/' + m[2] + '/items?limit=50&offset=' + offset)
+        .then(d => d && d.items ? d : Promise.reject())
+        .catch(() => { throw new Error("Spotify only shares songs from the host's own playlists"); }),
+    ]).then(([p, d]) => page(d.items.map(i => i.item || i.track), d.next,
+      p && { name: p.name, image: ((p.images || [])[0] || {}).url, uri: p.uri, sub: 'Playlist' }));
+  }
+
+  const BROWSE = { library, list: listPage };
+
+  // A song's share link from the Spotify app finds that song.
+  function find(q) {
+    const m = /track[/:]([A-Za-z0-9]{22})/.exec(q);
+    if (m) return Music.api('GET', '/tracks/' + m[1]).then(t => [trackInfo(t)]);
+    return Music.api('GET', '/search?type=track&limit=10&q=' + encodeURIComponent(q)).then(d => d.tracks.items.map(t => trackInfo(t)));
   }
 
   function handle(row) {
@@ -156,9 +225,10 @@ const Jam = (() => {
     const op = row.kind === 'edit' && JSON.parse(row.query);
     if (op && CONTROLS[op.op]) {
       done = controlPlayer(row, op);
+    } else if (op && BROWSE[op.op]) {
+      done = BROWSE[op.op](op).then(res => answer(row.id, res));
     } else if (row.kind === 'search') {
-      done = Music.api('GET', '/search?type=track&limit=10&q=' + encodeURIComponent(row.query))
-        .then(d => answer(row.id, d.tracks.items.map(t => trackInfo(t))));
+      done = find(row.query).then(tracks => answer(row.id, tracks));
     } else if (row.kind === 'add') {
       done = addPick(row).then(tick);
     } else {

@@ -18,7 +18,8 @@ import urllib.request
 import webbrowser
 
 REDIRECT = 'http://127.0.0.1:8888/callback'
-SCOPES = 'streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state'
+SCOPES = ('streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state'
+          ' user-read-recently-played user-top-read user-library-read playlist-read-private playlist-read-collaborative')
 CONFIG_LOCAL = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'app', 'config.local.js')
 
 if len(sys.argv) != 2:

@@ -287,7 +287,11 @@ media keys work everywhere.
 Spotify Jams have no API, so the launcher does its own. Selecting the Spotify corner fills
 the screen with a QR code. It opens `jam/index.html` on a guest's phone, a Spotify-style page
 where they can:
-- search and add songs;
+- search and add songs, or paste a song, album or playlist link from their Spotify app;
+- browse your playlists, Liked Songs, recently played, and top songs and artists, then add
+  songs from them or play a whole playlist. Spotify only shares the songs of playlists you
+  own or collaborate on, and none of its own mixes. Logins from before this feature lack the
+  permissions, so run `./spotify-login.py <client-id>` again and redeploy;
 - drag their songs into a new order, or swipe left to remove one;
 - see what's playing with a progress bar;
 - use shuffle, back, play/pause, next and repeat.
