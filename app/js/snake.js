@@ -8,9 +8,11 @@ App.screens.snake = (() => {
   let mode, sel, snake, dir, turns, food, score, wait, timer, flash;
 
   function reset() {
-    const y = Math.floor(ROWS / 2);
-    snake = [[8, y], [7, y], [6, y]];
-    dir = 'right';
+    // Start somewhere new each time, heading toward the far side of the board.
+    const x = 8 + Math.floor(Math.random() * (COLS - 16)), y = 4 + Math.floor(Math.random() * (ROWS - 8));
+    dir = x < COLS / 2 ? 'right' : 'left';
+    const back = DIRS[dir][0];
+    snake = [[x, y], [x - back, y], [x - 2 * back, y]];
     turns = [];
     score = 0;
     wait = 0;
@@ -58,7 +60,7 @@ App.screens.snake = (() => {
     if (mode === 'play') {
       wait -= dt;
       while (wait <= 0 && mode === 'play') {
-        wait += STEP[settings.speed] * Math.max(0.6, 1 - score * 0.01);
+        wait += STEP[settings.speed] * Math.max(0.5, 1 - score * 0.015);
         step();
       }
     } else if (mode === 'crash') {

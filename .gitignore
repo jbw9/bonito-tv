@@ -7,3 +7,4 @@ app/config.local.js
 INSTRUCTIONS.md
 deploy-heartive.sh
 heartive/
+.gstack/

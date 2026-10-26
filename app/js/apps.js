@@ -18,11 +18,15 @@ const CATALOG = [
   { key: 'appletv', name: 'APPLE TV', short: 'APPLE TV', color: '#B8BEC6', match: /^apple tv/, fallbackId: '3201807016597' },
   { key: 'paramount', name: 'PARAMOUNT+', short: 'PARAMOUNT+', color: '#0064FF', match: /paramount/, fallbackId: '3201710014981' },
   { key: 'spotify', name: 'SPOTIFY', short: 'SPOTIFY', color: '#1DB954', match: /^spotify/, fallbackId: '3201606009684' },
-  // Not apps: plain games. `key` is the game's screen.
-  { key: 'flappy', name: 'FLAPPY BIRD', short: 'FLAPPY', color: '#F4F6F8', game: true },
-  { key: 'dino', name: 'DINO RUN', short: 'DINO', color: '#F4F6F8', game: true },
-  { key: 'snake', name: 'SNAKE', short: 'SNAKE', color: '#F4F6F8', game: true },
-  { key: 'stack', name: 'STACK', short: 'STACK', color: '#F4F6F8', game: true },
+  // Not apps: plain screens. `key` is the screen; `group: 'games'` puts it in the home screen's GAMES folder.
+  { key: 'flappy', name: 'FLAPPY BIRD', short: 'FLAPPY', color: '#F4F6F8', game: true, group: 'games' },
+  { key: 'dino', name: 'DINO RUN', short: 'DINO', color: '#F4F6F8', game: true, group: 'games' },
+  { key: 'snake', name: 'SNAKE', short: 'SNAKE', color: '#F4F6F8', game: true, group: 'games' },
+  { key: 'stack', name: 'STACK', short: 'STACK', color: '#F4F6F8', game: true, group: 'games' },
+  { key: 'blackjack', name: 'BLACKJACK', short: 'BLACKJACK', color: '#F4F6F8', game: true, group: 'games' },
+  { key: 'roulette', name: 'ROULETTE', short: 'ROULETTE', color: '#F4F6F8', game: true, group: 'games' },
+  { key: 'dice', name: 'DICE', short: 'DICE', color: '#F4F6F8', game: true, group: 'games' },
+  { key: 'popeyes', name: 'POPEYES MENU', short: 'POPEYES', color: '#F26A1B', game: true },
 ];
 
-const DEFAULT_ON = ['hdmi1', 'hdmi2', 'hdmi3', 'hdmi4', 'heartive', 'youtube', 'netflix', 'flappy', 'dino', 'snake', 'stack'];
+const DEFAULT_ON = ['hdmi1', 'hdmi2', 'hdmi3', 'hdmi4', 'heartive', 'youtube', 'netflix', 'flappy', 'dino', 'snake', 'stack', 'blackjack', 'roulette', 'dice', 'popeyes'];

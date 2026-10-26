@@ -5,7 +5,7 @@ App.screens.stack = (() => {
   const GRAVITY = 2600;
   const MENU = ['START', 'SETTINGS'];
 
-  let mode, sel, layers, block, dir, debris, cam, score, timer, flash;
+  let mode, sel, layers, block, dir, debris, cam, score, timer, flash, hue;
 
   function reset() {
     layers = [{ x: (W - BASE_W) / 2, w: BASE_W, color: '#3a3f47' }];
@@ -13,6 +13,7 @@ App.screens.stack = (() => {
     cam = 0;
     score = 0;
     dir = 1;
+    hue = Math.floor(Math.random() * 360);
     block = null;
     flash = 0;
   }
@@ -20,8 +21,10 @@ App.screens.stack = (() => {
   function newBlock() {
     // Each layer shifts the hue a little, like the original.
     const top = layers[layers.length - 1];
-    dir = -dir;
-    block = { x: dir > 0 ? LEFT : RIGHT - top.w, w: top.w, color: 'hsl(' + (200 + score * 9) % 360 + ',70%,58%)' };
+    // Random side and entry point so the timing can't be memorised.
+    dir = Math.random() < 0.5 ? 1 : -1;
+    const x = LEFT + Math.random() * (RIGHT - LEFT - top.w);
+    block = { x, w: top.w, color: 'hsl(' + (hue + score * 9) % 360 + ',70%,58%)' };
   }
 
   function start() {
@@ -64,7 +67,7 @@ App.screens.stack = (() => {
     });
     debris = debris.filter(d => d.y < H + 200);
     if (mode === 'play') {
-      block.x += dir * (SPEED[settings.speed] + Math.min(score, 40) * 12) * dt;
+      block.x += dir * (SPEED[settings.speed] + Math.min(score, 50) * 14) * dt;
       if (block.x < LEFT) {
         block.x = LEFT;
         dir = 1;

@@ -77,7 +77,7 @@ App.screens.dino = (() => {
 
   function spawn() {
     let o;
-    if (score > 200 && Math.random() < 0.3) {
+    if (score > 150 && Math.random() < 0.2 + Math.min(score, 1500) / 1500 * 0.2) {
       o = { kind: 'ptero', x: W + 40, top: GROUND - PTERO_TOPS[Math.floor(Math.random() * PTERO_TOPS.length)], w: 17 * S };
     } else {
       const big = Math.random() < 0.4;
@@ -87,7 +87,9 @@ App.screens.dino = (() => {
       o = { kind: 'cactus', x: W + 40, cacti, w: cacti[count - 1].dx + cacti[count - 1].w };
     }
     obstacles.push(o);
-    untilNext = speed * (0.85 + Math.random() * 0.75) + o.w;
+    // Gaps tighten as the score climbs, on top of the speed-up.
+    const tight = Math.min(score, 1500) / 1500 * 0.1;
+    untilNext = speed * (0.85 - tight + Math.random() * (0.75 - tight)) + o.w;
   }
 
   function start() {

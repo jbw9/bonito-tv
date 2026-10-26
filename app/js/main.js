@@ -180,7 +180,10 @@ function boot() {
   resize();
   window.addEventListener('resize', resize);
 
+  // Screensaver: the Popeyes menu board after 10 minutes without a key press.
+  let lastKey = performance.now();
   document.addEventListener('keydown', e => {
+    lastKey = performance.now();
     const k = Platform.keyName(e);
     if (!k) return;
     e.preventDefault();
@@ -193,19 +196,28 @@ function boot() {
 
   // Coming back from Netflix etc. lands on a fresh launcher, not the splash.
   document.addEventListener('visibilitychange', () => {
+    lastKey = performance.now();
     if (!document.hidden && App.current === App.screens.splash && App.screens.splash.launched) App.home();
   });
 
   Platform.scanApps();
   App.home();
+  Music.start();
+  Jam.start();
 
   let last = performance.now();
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     clock += dt;
+    if (now - lastKey > 10 * 60e3 && App.current !== App.screens.popeyes && App.current !== App.screens.splash) App.go('popeyes');
     App.current.update(dt);
     App.current.draw(ctx);
+    // Home draws it itself, with the controls row.
+    // The Popeyes menu board stays clear of overlays.
+    const bare = App.current === App.screens.splash || App.current === App.screens.popeyes;
+    if (!bare && App.current !== App.screens.home) Music.draw(ctx);
+    if (!bare) Jam.draw(ctx);
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);

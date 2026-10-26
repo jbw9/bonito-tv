@@ -7,8 +7,15 @@ A home screen app for Samsung smart TVs in a retro dot-matrix style:
 - **HDMI inputs.** A port appears in the list while something is plugged into it.
 - **Clock, date and weather.** Weather comes from [Open-Meteo](https://open-meteo.com), with
   no account needed.
-- **Four games, played with the remote:** Flappy Bird, Dino Run, Snake and Stack. They get
-  harder as you score, and keep high scores on the TV. Shared leaderboards are optional.
+- **Games, played with the remote,** in a GAMES folder: Flappy Bird, Dino Run, Snake and
+  Stack get harder as you score and keep high scores on the TV (shared leaderboards are
+  optional). Blackjack, Roulette and Dice share a play-money bankroll of 1,000 chips that
+  tops back up when you go broke.
+- **Popeyes menu board,** which is also the screensaver after 10 minutes without a key press.
+- **Spotify in the background (optional).** Music plays from the TV's speakers on the home
+  screen and in the games, with a progress ring and controls in the bottom-left corner.
+- **Jam (optional).** Guests scan a QR code, then search, queue, reorder and control the
+  music from their phones. No app or Spotify account needed.
 
 Inspired by [this reel](https://www.instagram.com/p/DeyEH2tx4BO/) by tyler_.
 
@@ -202,9 +209,9 @@ Mac won't connect to your home Wi-Fi, even though your other devices do.
 
 | Remote     | Does                                                            |
 | ---------- | --------------------------------------------------------------- |
-| Up / Down  | Move through the list (apps, inputs, games)                      |
-| OK         | Open the selected item                                           |
-| Right      | The gear (settings)                                              |
+| Up / Down  | Move through the list (apps, inputs, GAMES, SETTINGS)            |
+| OK         | Open the selected item, or open/close the GAMES folder           |
+| Down past the last row | The Spotify corner (see below)                       |
 | Back       | Go back. On the home screen, Back exits the launcher.           |
 
 **In the games:**
@@ -219,7 +226,7 @@ Mac won't connect to your home Wi-Fi, even though your other devices do.
 When you lose, the game-over screen offers **Play again** (selected by default), **Exit**,
 and, on a new record, **Add name** for the leaderboard.
 
-**Settings (the gear):**
+**Settings (last in the list):**
 
 - Choose which apps and inputs appear.
 - Game speed.
@@ -255,6 +262,52 @@ Without this, scores stay on each TV. To share boards between TVs:
      supabaseKey: 'sb_publishable_...',
    });
    ```
+
+## Spotify in the background (optional)
+
+Needs Spotify Premium. Music plays inside the launcher itself, from the TV's speakers, and
+starts on its own when the launcher opens. It pauses while you're in Netflix etc. and picks up
+again when you come back.
+
+1. Create an app at the [Spotify developer dashboard](https://developer.spotify.com/dashboard).
+   Tick **Web API** and **Web Playback SDK**, and add the redirect URI
+   `http://127.0.0.1:8888/callback`. Spotify no longer accepts `localhost` there.
+2. Run `./spotify-login.py <client-id>` and log in in the browser tab it opens. It saves the
+   login to `app/config.local.js`.
+3. Optionally, set `spotifyPlaylist` to a playlist or album link to start on shuffle at boot.
+   Blank carries on with whatever you last played.
+4. Redeploy.
+
+On the home screen, press Down past the last row to reach the Spotify corner. Left and Right
+pick back, play/pause, next, or the speaker (TV or an Echo Dot). OK presses it. The remote's
+media keys work everywhere.
+
+## Jam: guests add songs (optional)
+
+Spotify Jams have no API, so the launcher does its own. Selecting the Spotify corner fills
+the screen with a QR code. It opens `jam/index.html` on a guest's phone, a Spotify-style page
+where they can:
+- search and add songs;
+- drag their songs into a new order, or swipe left to remove one;
+- see what's playing with a progress bar;
+- use shuffle, back, play/pause, next and repeat.
+
+The phone and the TV talk through rows in a Supabase table that the TV checks every second.
+
+Spotify's queue can only be added to, never reordered or trimmed. So guests' songs wait in the
+TV's own list, and each one is handed to Spotify about 20 seconds before the current song
+ends. After that it's marked "Playing next" and can't be moved.
+
+1. Set up Supabase as in [Shared leaderboards](#shared-leaderboards-optional). `supabase.sql`
+   includes the `jam` table.
+2. Host `jam/index.html` with your Supabase URL and publishable key filled in, e.g. on GitHub
+   Pages (Settings → Pages → deploy from `main`, root).
+3. Set `jamUrl` to its address, e.g. `'https://<user>.github.io/tv-setup/jam/'`.
+4. Optional, for search results as you type: set `spotifyClientSecret` (dashboard → your app →
+   Settings). Without it, every search goes through the TV, about 2 seconds each.
+
+The secret stays on the TV. Guests get only a short-lived app token that can search
+Spotify's catalogue and nothing else.
 
 ## Adding an app
 
@@ -367,8 +420,43 @@ The TV isn't connected to sdb. It may have left the hotspot, turned off, or chan
 Check `~/tizen-studio/tools/sdb devices`, then reconnect.
 
 ### `sdb shell 0 debug <app id>` hangs
-Remote debugging doesn't start on these TVs. Don't wait on it. To see what the app is doing,
-have it send logs to your computer over HTTP instead.
+It hangs while the app is already running. Stop the app first, then start it in debug mode:
+```
+sdb -s <tv-ip>:26101 shell 0 was_kill <app id>
+sdb -s <tv-ip>:26101 shell 0 debug <app id>      # prints "port: NNNNN"
+sdb -s <tv-ip>:26101 forward tcp:NNNNN tcp:NNNNN
+curl http://127.0.0.1:NNNNN/json                 # the DevTools websocket for the page
+```
+
+### Spotify plays about 10 seconds of each song, then stops
+That's how far a song gets before its licence check. The TV's browser has no
+`AbortSignal.timeout`, so Spotify's player hands `fetch` a stand-in signal that `fetch`
+rejects, and the licence request never goes out. `app/js/music.js` patches `fetch` inside
+the player's frame to drop that signal. Keep that patch if you change the player.
+
+### Music goes to the TV's Spotify app or another device instead of the TV
+The TV's own Spotify app can't be the speaker: it goes to sleep as soon as it's off screen.
+The launcher plays through its own built-in player ("TV" in Spotify's device list). It only
+switches to the Echo Dot when you choose it with the speaker button. That choice is
+remembered, so press it again to come back.
+
+### A friend on the same Wi-Fi can't open the jam page
+A page served from your computer only works where the network lets devices see each other,
+and many routers block that. Host `jam/index.html` on GitHub Pages instead; it then works on
+any network, even mobile data.
+
+### Guests can add songs but not reorder, remove or control playback
+The `jam` table is from an older `supabase.sql`, whose check doesn't allow `edit` rows
+(`violates check constraint "jam_kind_check"`). Run `supabase.sql` again; it's safe to re-run.
+
+### The jam QR code won't scan
+Don't round the small squares. At a few pixels each, rounding leaves gaps that phone cameras
+trip on. Only the three corner squares are rounded.
+
+### Why not log guests in with your Spotify account for search?
+Logging in again with fewer permissions doesn't limit anything: Spotify keeps every
+permission the app was ever granted. A token handed to phones would control your whole
+account. That's why phones get an app-only token instead (`spotifyClientSecret`).
 
 ### An HDMI input doesn't show in the launcher
 The launcher lists only ports the TV reports as **connected**. Most TVs report a port as

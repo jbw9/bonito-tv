@@ -1,6 +1,6 @@
 App.screens.flappy = (() => {
   const TOP = LIGHTBAR_H, GROUND = 968, BIRD_X = 460, R = 15;
-  const PIPE_W = 124, CAP_W = 150, CAP_H = 38, GAP = 300, MIN_GAP = 220, SPACING = 520;
+  const PIPE_W = 124, CAP_W = 150, CAP_H = 38, GAP = 310, MIN_GAP = 210;
   const PIPE_COLOR = '#5EC64A';
   const SPEED = { slow: 250, normal: 330, fast: 430 };
   const GRAVITY = 2500, FLAP = -760, MAX_FALL = 1100;
@@ -36,10 +36,14 @@ App.screens.flappy = (() => {
   }
 
   function spawn(x) {
-    // The gap closes a little with every point, down to MIN_GAP.
-    const margin = 110, gap = Math.max(MIN_GAP, GAP - score * 2);
-    const gapY = TOP + margin + gap / 2 + Math.random() * (GROUND - TOP - 2 * margin - gap);
-    pipes.push({ x, gapY, gap, scored: false });
+    // The gap closes with every point and the next gap may sit further from the
+    // last one, so early pipes are gentle and later ones demand big swings.
+    const margin = 110, gap = Math.max(MIN_GAP, GAP - score * 4);
+    const lo = TOP + margin + gap / 2, hi = GROUND - margin - gap / 2;
+    const prev = pipes.length ? pipes[pipes.length - 1].gapY : (lo + hi) / 2;
+    const reach = Math.min(hi - lo, 360, 160 + score * 10);
+    const gapY = Math.max(lo, Math.min(hi, prev + (Math.random() * 2 - 1) * reach));
+    pipes.push({ x, gapY, gap, scored: false, next: 480 + Math.random() * 180 });
   }
 
   function start() {
@@ -79,7 +83,7 @@ App.screens.flappy = (() => {
   function update(dt) {
     flash = Math.max(0, flash - dt * 2.5);
     if (mode === 'play') {
-      const speed = SPEED[settings.speed] + Math.min(score, 30) * 4;
+      const speed = SPEED[settings.speed] + Math.min(score, 40) * 5;
       bird.vy = Math.min(MAX_FALL, bird.vy + GRAVITY * dt);
       bird.y += bird.vy * dt;
       if (bird.y < TOP + R) {
@@ -90,7 +94,7 @@ App.screens.flappy = (() => {
       pipes.forEach(p => { p.x -= speed * dt; });
       if (pipes.length && pipes[0].x < -CAP_W) pipes.shift();
       const last = pipes[pipes.length - 1];
-      if (last.x < W + 200 - SPACING) spawn(last.x + SPACING);
+      if (last.x < W + 200 - last.next) spawn(last.x + last.next);
       for (const p of pipes) {
         if (!p.scored && p.x + PIPE_W < BIRD_X - R) {
           p.scored = true;

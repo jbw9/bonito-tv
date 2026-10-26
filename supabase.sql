@@ -29,3 +29,26 @@ create policy "scores are shared" on public.scores for all to anon using (true) 
 -- Read and add only: clear a board from the Supabase dashboard.
 revoke all on public.scores from anon;
 grant select, insert on public.scores to anon;
+
+-- Launcher jam (see app/js/jam.js and jam/index.html): guests' searches and song picks,
+-- answered by the TV in `results`, plus one 'state' row per room with the queue.
+-- Anyone with the room code can add songs.
+create table if not exists public.jam (
+  id bigint generated always as identity primary key,
+  code text not null check (char_length(code) between 4 and 8),
+  kind text not null,
+  name text check (char_length(name) <= 24),
+  query text not null check (char_length(query) between 1 and 200),
+  title text check (char_length(title) <= 200),
+  results jsonb,
+  created_at timestamptz not null default now()
+);
+create index if not exists jam_code_id on public.jam (code, id);
+alter table public.jam drop constraint if exists jam_kind_check;
+alter table public.jam add constraint jam_kind_check check (kind in ('search', 'add', 'edit', 'state'));
+alter table public.jam enable row level security;
+drop policy if exists "jam is shared" on public.jam;
+create policy "jam is shared" on public.jam for all to anon using (true) with check (true);
+-- Read, add and answer only: clear old requests from the Supabase dashboard.
+revoke all on public.jam from anon;
+grant select, insert, update on public.jam to anon;
