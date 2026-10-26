@@ -1,9 +1,23 @@
-# Seeker Flap: a Flappy Bird launcher for Samsung TVs
+# Bonito: a home screen for your TV, with games, a phone remote and a Spotify jam
 
-A home screen app for Samsung smart TVs in a retro dot-matrix style:
+Website, live demo and install guide: **https://jbw9.github.io/bonito-tv/**
+
+A home screen app in a retro dot-matrix style. It runs fully on Samsung smart TVs (this
+README), as an app on Google TV / Android TV / Fire TV (`bonito.apk`, built by
+`android/build.sh`), and in any TV's web browser at `jbw9.github.io/bonito-tv/tv`.
+[SETUP.md](SETUP.md) covers every kind of TV, and Claude Code can follow it for you.
+
+- **Phones as remotes and controllers.** The home screen's Connect Phone code opens a phone
+  page with a remote, keyboard and volume, and the party games (Trivia, Tic Tac Toe, Air
+  Hockey, Pong, Light Cycles, Wordle race) use phones as controllers. Each TV has its own
+  random room code, so phones only ever reach the TV they scanned.
+- **Five designs**, each its own home screen layout: Bonito (dot-matrix list), Horizon
+  (landscape, big clock and app dock), Departures (split-flap board), Teletext and Media bar.
+  Pick in Settings or from the phone setup page.
 
 - **App launcher.** Netflix, YouTube, Hulu, Disney+, Prime Video, Max, Peacock, Apple TV,
-  Paramount+ and Spotify. Only the apps installed on your TV appear.
+  Paramount+, Crunchyroll, Plex, Tubi, Twitch, ESPN and Spotify, each with its own icon. Only
+  the apps installed on your TV appear.
 - **HDMI inputs.** A port appears in the list while something is plugged into it.
 - **Clock, date and weather.** Weather comes from [Open-Meteo](https://open-meteo.com), with
   no account needed.
@@ -20,7 +34,7 @@ A home screen app for Samsung smart TVs in a retro dot-matrix style:
 Inspired by [this reel](https://www.instagram.com/p/DeyEH2tx4BO/) by tyler_.
 
 > Samsung doesn't let a third-party app replace the TV's own home screen or start at boot.
-> Pin Seeker Flap to the home bar so it's one press away.
+> Pin Bonito to the home bar so it's one press away.
 
 ## What you need
 
@@ -182,7 +196,7 @@ This signs the app, installs it and opens it on the TV. Run it once for each TV.
 When you're done:
 
 1. Move the TV back to your normal Wi-Fi if you used a hotspot. Developer Mode can stay on.
-2. Pin the app to the home bar: in the Apps screen, highlight **Seeker Flap**, press and
+2. Pin the app to the home bar: in the Apps screen, highlight **Bonito**, press and
    hold OK (or press Down), and choose **Add to Home**.
 
 **To update later:** reconnect the TV (steps 2 and 4), then run `./deploy.sh <tv-ip>` again.
@@ -229,14 +243,20 @@ and, on a new record, **Add name** for the leaderboard.
 **Settings (last in the list):**
 
 - Choose which apps and inputs appear.
+- Design.
 - Game speed.
 - Light bar on or off.
 - 12- or 24-hour clock.
 - Reset best scores.
+- Phone setup: a QR code for setting your name, city, design and Spotify from a phone.
 
 ## Personal settings
 
-Defaults live in `app/config.js`. Put your own in `app/config.local.js`, which git ignores,
+The easy way: on the TV, open **Settings › Phone setup** and scan the code. The phone page
+(`setup/index.html`) sets your name, city, units, design and Spotify login, and the TV
+restarts with them. Nothing to redeploy.
+
+Or by file: defaults live in `app/config.js`. Put your own in `app/config.local.js`, which git ignores,
 so they survive updates:
 
 ```js
@@ -249,9 +269,12 @@ Object.assign(window.CONFIG, {
 
 Redeploy after changing them.
 
-## Shared leaderboards (optional)
+## Shared leaderboards, phone remote and jam: your own Supabase (optional)
 
-Without this, scores stay on each TV. To share boards between TVs:
+These work out of the box through a shared Supabase project set in `app/config.js`. Each TV
+makes its own random room code (or set `room` in `app/config.local.js`, 4 to 8 letters and
+digits), and `supabase.sql` only lets a request see the jam rows of the room it names, so
+TVs never see each other's phones or songs. To use your own project instead:
 
 1. Create a free [Supabase](https://supabase.com) project.
 2. Paste `supabase.sql` into SQL Editor and click **Run**.
@@ -262,12 +285,19 @@ Without this, scores stay on each TV. To share boards between TVs:
      supabaseKey: 'sb_publishable_...',
    });
    ```
+4. Put the same URL and key at the top of the scripts in `jam/index.html` and
+   `setup/index.html`, and host them (e.g. GitHub Pages: Settings → Pages → deploy from
+   `main`, root). Set `jamUrl` to the hosted jam page,
+   e.g. `'https://<user>.github.io/bonito-tv/jam/'`.
 
 ## Spotify in the background (optional)
 
 Needs Spotify Premium. Music plays inside the launcher itself, from the TV's speakers, and
 starts on its own when the launcher opens. It pauses while you're in Netflix etc. and picks up
 again when you come back.
+
+The easy way is **Settings › Phone setup** on the TV: the phone page walks you through
+creating the Spotify app and logging in, and sends the login to the TV. By file instead:
 
 1. Create an app at the [Spotify developer dashboard](https://developer.spotify.com/dashboard).
    Tick **Web API** and **Web Playback SDK**, and add the redirect URI
@@ -301,13 +331,11 @@ Spotify's queue can only be added to, never reordered or trimmed. So guests' son
 TV's own list, and each one is handed to Spotify about 20 seconds before the current song
 ends. After that it's marked "Playing next" and can't be moved.
 
-1. Set up Supabase as in [Shared leaderboards](#shared-leaderboards-optional). `supabase.sql`
-   includes the `jam` table.
-2. Host `jam/index.html` with your Supabase URL and publishable key filled in, e.g. on GitHub
-   Pages (Settings → Pages → deploy from `main`, root).
-3. Set `jamUrl` to its address, e.g. `'https://<user>.github.io/tv-setup/jam/'`.
-4. Optional, for search results as you type: set `spotifyClientSecret` (dashboard → your app →
-   Settings). Without it, every search goes through the TV, about 2 seconds each.
+It's on as soon as Spotify is set up: the jam page is hosted with the shared Supabase project
+(see [your own Supabase](#shared-leaderboards-phone-remote-and-jam-your-own-supabase-optional)
+to run your own). Optional, for search results as you type: set `spotifyClientSecret`
+(dashboard → your app → Settings), in phone setup or `app/config.local.js`. Without it,
+every search goes through the TV, about 2 seconds each.
 
 The secret stays on the TV. Guests get only a short-lived app token that can search
 Spotify's catalogue and nothing else.
@@ -319,6 +347,18 @@ Add a line to `CATALOG` in `app/js/apps.js`:
 - `match` is a regular expression tested against the app name the TV reports, in lower case.
 - `fallbackId` is the app's Tizen ID, used only if the TV won't list its apps.
 - If the app should appear by default, add its key to `DEFAULT_ON`.
+
+To add an app of your own without touching `apps.js` (say, another app you sideloaded), list
+it in `app/config.local.js` with its exact app id. It goes right after the HDMI inputs, and a
+logo at `app/img/logos/<key>.png` shows when it's selected:
+
+```js
+Object.assign(window.CONFIG, {
+  apps: [{ key: 'myapp', name: 'MY APP', short: 'MY APP', color: '#FF7575', appId: 'Abc1234567.MyApp' }],
+});
+```
+
+To add a design, add an entry to `DESIGNS` in `app/js/designs.js`.
 
 ## Common problems
 
@@ -391,10 +431,10 @@ The tizen CLI resolves a relative `-o` against its own folder, so the file ends 
 
 ### "Failed to install Tizen application" with no other detail
 There are two causes:
-1. **A space in the .wgt filename.** The package is named after the app (`Seeker Flap.wgt`),
-   and the TV's installer silently fails on spaces. Rename it before installing:
+1. **A space in the .wgt filename.** The package is named after the app's `<name>` in
+   `config.xml`, and the TV's installer silently fails on spaces. Rename it before installing:
    ```
-   mv "Seeker Flap.wgt" launcher.wgt
+   mv "My App.wgt" launcher.wgt
    ~/tizen-studio/tools/ide/bin/tizen install -n launcher.wgt -s <tv-ip>:26101
    ```
    `deploy.sh` already does this.

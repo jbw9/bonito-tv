@@ -7,8 +7,6 @@
 // in the TV's own list (reorderable and removable from the phone) and each is handed
 // to Spotify's queue near the end of the song before it.
 const Jam = (() => {
-  // One TV, so one fixed room; jam/index.html uses the same one.
-  const ROOM = 'HOME';
   const QR_SIZE = 760;
   const HANDOFF_MS = 20000; // ticks run every 5s, so this leaves room for a slow one
   let lastId = 0, stateId = 0, stateJson = '', busy = false, ticking = false, toast = null;
@@ -27,7 +25,8 @@ const Jam = (() => {
   function db(method, path, body) {
     return fetch(CONFIG.supabaseUrl + '/rest/v1/' + path, {
       method,
-      headers: { apikey: CONFIG.supabaseKey, 'Content-Type': 'application/json', Prefer: 'return=representation' },
+      // supabase.sql only lets a request see rows of the room it names here.
+      headers: { apikey: CONFIG.supabaseKey, 'x-room': ROOM, 'Content-Type': 'application/json', Prefer: 'return=representation' },
       body: body && JSON.stringify(body),
     }).then(r => {
       if (!r.ok) throw new Error('HTTP ' + r.status);

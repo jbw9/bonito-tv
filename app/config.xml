@@ -4,7 +4,7 @@
     <content src="index.html"/>
     <feature name="http://tizen.org/feature/screen.size.all"/>
     <icon src="icon.png"/>
-    <name>Seeker Flap</name>
+    <name>Bonito</name>
     <access origin="*" subdomains="true"/>
     <tizen:privilege name="http://tizen.org/privilege/application.launch"/>
     <tizen:privilege name="http://tizen.org/privilege/application.info"/>

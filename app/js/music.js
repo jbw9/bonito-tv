@@ -285,7 +285,7 @@ const Music = (() => {
       g.arc(cx, cy, 26, 0, Math.PI * 2);
       g.stroke();
     }
-    g.fillStyle = on ? '#ffffff' : '#7d838c';
+    g.fillStyle = on ? design.ink : design.mute;
     g.beginPath();
     if (kind === 'pause') {
       g.rect(cx - 8, cy - 10, 6, 20);
@@ -366,7 +366,9 @@ const Music = (() => {
     let text = track ? clean(track.name + ' - ' + track.artist) : status;
     if (track && focused != null) text += '   ON ' + (speaker() === 'tv' ? 'TV' : 'ECHO DOT');
     const cell = 3.5;
-    if (text) drawText(g, text, x, cy - 3.5 * cell, cell, playing ? '#d3d7dd' : '#7d838c', { style: 'thin' });
+    // Home (which passes `focused`) is in the design's colours; other screens are dark.
+    const ink = focused != null ? [design.soft, design.mute] : ['#d3d7dd', '#7d838c'];
+    if (text) drawText(g, text, x, cy - 3.5 * cell, cell, playing ? ink[0] : ink[1], { style: 'thin' });
   }
 
   return { start, draw, key, enabled, api, catalogToken, hold, now, poll, act: name => actions[name]() };

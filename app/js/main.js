@@ -4,7 +4,7 @@ const ctx = canvas.getContext('2d');
 let clock = 0; // seconds since boot, drives idle animations
 
 const settings = Object.assign(
-  { speed: 'normal', lightbar: true, clock: '12h', apps: {} },
+  { speed: 'normal', lightbar: true, clock: '12h', design: CONFIG.design || 'bonito', apps: {} },
   // New key so TVs that saved the old app list pick up the new defaults.
   Platform.load('launcher', {})
 );
@@ -15,6 +15,20 @@ CATALOG.forEach(a => {
 function saveSettings() {
   Platform.save('launcher', settings);
 }
+
+// Name, city, design and Spotify login sent from a phone (setup/index.html), over
+// whatever config.js and config.local.js say.
+Object.assign(CONFIG, Platform.load('profile', {}));
+setDesign(Platform.param('design') || settings.design);
+
+// This TV's room on Supabase. Phones join it by scanning the TV's QR code, so they
+// reach this TV and no other. Random per TV unless CONFIG.room pins one (4-8 letters).
+const ROOM = CONFIG.room || Platform.load('room', null) || (() => {
+  const ABC = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+  const code = Array.from(crypto.getRandomValues(new Uint8Array(8)), n => ABC[n % ABC.length]).join('');
+  Platform.save('room', code);
+  return code;
+})();
 
 let lastKey = 0; // performance.now() of the last press, for the screensaver
 
@@ -74,33 +88,46 @@ function drawBackground(g, top, edge) {
   g.drawImage(backdrops[key], 0, 0);
 }
 
-// Rainbow dot-matrix light bar along the top edge. One hue period spans the
-// screen width, so scrolling a double-width strip loops seamlessly.
+// Dot-matrix light bar along the top edge, in the design's colour or rainbow. One
+// hue period spans the screen width, so scrolling a double-width strip loops seamlessly.
 const LIGHTBAR_H = 40;
-const lightbar = makeCanvas(W * 2, LIGHTBAR_H + 16, b => {
-  const step = 8;
-  for (let x = 0; x < W * 2; x += step) {
-    const hue = (x / W) * 360;
-    b.fillStyle = 'hsl(' + hue + ',100%,60%)';
-    for (let row = 0; row < 4; row++) {
-      b.beginPath();
-      b.arc(x + 4, 6 + row * 9, 2.7, 0, Math.PI * 2);
-      b.fill();
+const lightbars = {};
+function makeLightbar(d) {
+  return makeCanvas(W * 2, LIGHTBAR_H + 16, b => {
+    const step = 8;
+    for (let x = 0; x < W * 2; x += step) {
+      const lit = typeof d.bar === 'function' ? 'hsl(' + d.bar(x / W) + ',100%,60%)' : d.bar;
+      const glow = b.createLinearGradient(0, LIGHTBAR_H - 2, 0, LIGHTBAR_H + 16);
+      if (typeof d.bar === 'function') {
+        glow.addColorStop(0, 'hsla(' + d.bar(x / W) + ',100%,55%,0.35)');
+        glow.addColorStop(1, 'hsla(' + d.bar(x / W) + ',100%,55%,0)');
+      } else {
+        glow.addColorStop(0, mix(d.bar, d.bg[0], 0.65));
+        glow.addColorStop(1, d.bg[0]);
+      }
+      // Single-colour bars dim and brighten along their length so the motion shows.
+      const wave = Math.sin(x / W * Math.PI * 4);
+      b.globalAlpha = typeof d.bar === 'function' ? 1 : 0.55 + 0.45 * wave * wave;
+      b.fillStyle = lit;
+      for (let row = 0; row < 4; row++) {
+        b.beginPath();
+        b.arc(x + 4, 6 + row * 9, 2.7, 0, Math.PI * 2);
+        b.fill();
+      }
+      b.globalAlpha = 1;
+      b.fillStyle = glow;
+      b.fillRect(x, LIGHTBAR_H - 2, step, 18);
     }
-    const glow = b.createLinearGradient(0, LIGHTBAR_H - 2, 0, LIGHTBAR_H + 16);
-    glow.addColorStop(0, 'hsla(' + hue + ',100%,55%,0.35)');
-    glow.addColorStop(1, 'hsla(' + hue + ',100%,55%,0)');
-    b.fillStyle = glow;
-    b.fillRect(x, LIGHTBAR_H - 2, step, 18);
-  }
-});
+  });
+}
 
 function drawLightBar(g) {
-  if (!settings.lightbar) return;
-  g.fillStyle = '#07080a';
+  if (!settings.lightbar || !design.bar) return;
+  if (!lightbars[design.key]) lightbars[design.key] = makeLightbar(design);
+  g.fillStyle = design.barBg;
   g.fillRect(0, 0, W, LIGHTBAR_H);
   const off = (clock * 90) % W;
-  g.drawImage(lightbar, -off, 0);
+  g.drawImage(lightbars[design.key], -off, 0);
 }
 
 function drawGround(g, y, scroll) {
@@ -136,7 +163,7 @@ App.screens.splash = (() => {
       Platform.launch(app).then(result => {
         if (result === 'ok') return;
         if (result === 'input') return App.go('input', app);
-        status = result === 'preview' ? 'PREVIEW - NOT ON TV' : 'COULD NOT OPEN';
+        status = result === 'preview' ? 'ON A TV THIS OPENS THE APP' : 'COULD NOT OPEN';
         setTimeout(() => { if (App.current === screen) App.home(); }, 1800);
       });
     },
@@ -206,6 +233,21 @@ function boot() {
     const k = Platform.keyName(e);
     if (k) releaseKey(k);
   });
+  // Keys from outside the page: the Android TV app's Back and media keys, and the
+  // website's demo TV (index.html), which also switches designs.
+  window.tvKey = k => {
+    if (['toggle', 'next', 'prev'].indexOf(k) >= 0) return Music.enabled() && Music.act(k);
+    pressKey(k, false);
+    releaseKey(k);
+  };
+  window.addEventListener('message', e => {
+    if (e.source !== window.parent || !e.data) return;
+    if (e.data.key) window.tvKey(e.data.key);
+    if (e.data.home) App.home();
+    if (e.data.design) setDesign(e.data.design);
+  });
+  // The website shows the demo TV's room as a QR code so a visitor's phone can drive it.
+  if (window.parent !== window) window.parent.postMessage({ room: ROOM }, '*');
 
   // Coming back from Netflix etc. lands on a fresh launcher, not the splash.
   document.addEventListener('visibilitychange', () => {
@@ -236,6 +278,7 @@ function boot() {
     if (!bare && App.current !== App.screens.home) Music.draw(ctx);
     if (!bare) Jam.draw(ctx);
     Phones.draw(ctx);
+    if (!bare && App.current !== App.screens.youtube && App.current !== App.screens.input) drawScanlines(ctx);
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);

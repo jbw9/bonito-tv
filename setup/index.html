@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#121212">
+  <title>Set up your TV</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root { --bg: #121212; --card: #1d1d1d; --line: #2c2c2c; --ink: #fff; --sub: #b3b3b3; --dim: #727272; --green: #1ed760; --red: #ff5a5f; }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; background: var(--bg); color: var(--ink); }
+    body { font: 16px/1.4 Figtree, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+    main { max-width: 520px; margin: 0 auto; padding: calc(20px + env(safe-area-inset-top)) 16px 140px; }
+    h1 { margin: 6px 0 4px; font-size: 30px; font-weight: 800; letter-spacing: -.02em; }
+    h2 { margin: 0 0 12px; font-size: 18px; font-weight: 800; }
+    p { margin: 0 0 12px; color: var(--sub); }
+    a { color: var(--green); }
+    .status { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--dim); }
+    .status::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+    .status.on { color: var(--green); }
+    section { margin-top: 18px; padding: 18px; border-radius: 16px; background: var(--card); }
+    label { display: block; margin: 0 0 6px; font-size: 13px; font-weight: 700; color: var(--sub); }
+    input {
+      width: 100%; margin-bottom: 14px; padding: 13px 14px; border: 1px solid var(--line); border-radius: 10px;
+      background: #121212; color: var(--ink); font: 500 16px Figtree, sans-serif;
+    }
+    input:focus { outline: none; border-color: var(--green); }
+    button { font: inherit; color: inherit; border: 0; cursor: pointer; }
+    .seg { display: flex; gap: 8px; margin-bottom: 4px; }
+    .seg button { flex: 1; padding: 11px; border-radius: 10px; background: #121212; border: 1px solid var(--line); font-weight: 700; color: var(--sub); }
+    .seg button.on { border-color: var(--green); color: var(--ink); }
+    .designs { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+    .design { padding: 0; border-radius: 12px; overflow: hidden; border: 2px solid transparent; background: none; text-align: left; }
+    .design.on { border-color: var(--green); }
+    .design img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; background: #000; }
+    .design b { display: block; padding: 8px 10px; font-size: 13px; background: #121212; }
+    ol { margin: 0 0 14px; padding-left: 20px; color: var(--sub); }
+    ol li { margin-bottom: 8px; }
+    code { padding: 2px 6px; border-radius: 6px; background: #121212; color: var(--ink); font-size: 13px; word-break: break-all; }
+    .copy { margin-left: 4px; padding: 2px 8px; border-radius: 6px; background: var(--line); font-size: 12px; font-weight: 700; }
+    .wide { width: 100%; padding: 15px; border-radius: 999px; font-weight: 800; }
+    .spotify { background: var(--green); color: #000; }
+    .ghost { background: var(--line); }
+    .linked { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; color: var(--green); font-weight: 700; }
+    details summary { cursor: pointer; color: var(--sub); font-size: 14px; font-weight: 700; margin-bottom: 10px; }
+    .send { position: fixed; left: 0; right: 0; bottom: 0; padding: 14px 16px calc(14px + env(safe-area-inset-bottom)); background: linear-gradient(transparent, var(--bg) 30%); }
+    .send button { display: block; max-width: 488px; margin: 0 auto; background: var(--ink); color: #000; }
+    .send button:disabled { opacity: .35; }
+    .msg { margin: 10px auto 0; max-width: 488px; text-align: center; font-size: 14px; color: var(--sub); min-height: 1.4em; }
+    .msg.bad { color: var(--red); }
+    .msg.good { color: var(--green); }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <main>
+    <span class="status" id="status">Connecting…</span>
+    <h1>Set up your TV</h1>
+    <p id="intro">Fill in what you like, then press Send to TV. Keep <b>Settings › Phone setup</b> open on the TV while you do.</p>
+
+    <div id="no-room" hidden>
+      <section>
+        <h2>Which TV?</h2>
+        <p>On the TV, open <b>Settings › Phone setup</b> and scan its QR code with your phone's camera.</p>
+      </section>
+    </div>
+
+    <div id="form" hidden>
+      <section>
+        <h2>You</h2>
+        <label for="name">Name on the home screen</label>
+        <input id="name" maxlength="16" placeholder="Alex" autocomplete="given-name">
+        <label for="city">City for the weather</label>
+        <input id="city" maxlength="60" placeholder="Leave blank to work it out">
+        <label>Temperature</label>
+        <div class="seg" id="units">
+          <button data-v="fahrenheit">°F</button>
+          <button data-v="celsius">°C</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>Design</h2>
+        <div class="designs" id="designs"></div>
+      </section>
+
+      <section>
+        <h2>Spotify <span style="color:var(--dim);font-weight:500">· optional, Premium only</span></h2>
+        <div id="sp-linked" hidden>
+          <div class="linked">✓ <span id="sp-who">Spotify connected</span></div>
+          <button class="wide ghost" id="sp-reset">Use a different account</button>
+        </div>
+        <div id="sp-steps">
+          <p>Music plays through the TV, and friends can add songs from their phones. Spotify needs you to make a free developer app once (about two minutes):</p>
+          <ol>
+            <li>Open <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener">developer.spotify.com/dashboard</a>, log in and press <b>Create app</b>.</li>
+            <li>Any name and description. Under <b>Redirect URIs</b> add<br><code id="redirect"></code><button class="copy" id="copy">Copy</button></li>
+            <li>Tick <b>Web API</b> and <b>Web Playback SDK</b>, agree and save.</li>
+            <li>Copy the app's <b>Client ID</b> into the box below.</li>
+          </ol>
+          <label for="client">Client ID</label>
+          <input id="client" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="32 letters and numbers">
+          <button class="wide spotify" id="sp-login">Log in with Spotify</button>
+        </div>
+        <details style="margin-top:14px">
+          <summary>More Spotify options</summary>
+          <label for="playlist">Playlist to start on shuffle (a share link)</label>
+          <input id="playlist" autocomplete="off" placeholder="https://open.spotify.com/playlist/…">
+          <label for="secret">Client secret, for instant search when friends add songs</label>
+          <input id="secret" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="From the app's settings in the dashboard">
+        </details>
+      </section>
+    </div>
+  </main>
+  <div class="send" id="send-bar" hidden>
+    <button class="wide" id="send" disabled>Send to TV</button>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <script>
+    // The TV's side is App.screens.setup in app/js/settings.js. Settings go over the same
+    // Supabase Realtime room as the phone remote (app/js/remote.js), and the TV only takes
+    // them while its Phone setup screen is open. The Spotify login is PKCE, done here in
+    // the browser; only the resulting refresh token goes to the TV.
+    const SUPABASE = 'https://jbvkjvdthuzofvmhwctv.supabase.co';
+    const KEY = 'sb_publishable_hbxcjbYF5H8py5gGLokxPg_tD9nGsNl';
+    const SCOPES = 'streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state';
+    const REDIRECT = location.origin + location.pathname;
+    // The layouts in app/js/home.js, with the website's screenshots of them.
+    const DESIGNS = [
+      { key: 'bonito', name: 'Bonito' },
+      { key: 'horizon', name: 'Horizon' },
+      { key: 'departures', name: 'Departures' },
+      { key: 'teletext', name: 'Teletext' },
+      { key: 'mediabar', name: 'Media bar' },
+    ];
+    const $ = id => document.getElementById(id);
+    const store = {
+      get: (k, d) => { try { const v = localStorage.getItem('setup-' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+      set: (k, v) => { try { localStorage.setItem('setup-' + k, JSON.stringify(v)); } catch (e) {} },
+    };
+
+    // Same room memory as the jam page, so a phone that scanned either reaches this TV.
+    const ROOM = (() => {
+      const asked = (new URLSearchParams(location.search).get('room') || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+      try {
+        if (asked) localStorage.setItem('jam-room', asked);
+        return asked || localStorage.getItem('jam-room') || '';
+      } catch (e) { return asked; }
+    })();
+
+    let units = store.get('units', 'fahrenheit'), designKey = store.get('design', 'bonito');
+    let spotify = store.get('spotify', null); // { clientId, refreshToken, who }
+
+    function msg(text, kind) {
+      $('msg').textContent = text;
+      $('msg').className = 'msg' + (kind ? ' ' + kind : '');
+    }
+
+    // ---- form -----------------------------------------------------------------------
+    function renderUnits() {
+      document.querySelectorAll('#units button').forEach(b => b.classList.toggle('on', b.dataset.v === units));
+    }
+    document.querySelectorAll('#units button').forEach(b => {
+      b.onclick = () => { units = b.dataset.v; store.set('units', units); renderUnits(); };
+    });
+
+    function renderDesigns() {
+      $('designs').textContent = '';
+      DESIGNS.forEach(d => {
+        const b = document.createElement('button');
+        b.className = 'design' + (d.key === designKey ? ' on' : '');
+        b.innerHTML = '<img alt=""><b></b>';
+        b.querySelector('img').src = '../img/designs/' + d.key + '.jpg';
+        b.querySelector('b').textContent = d.name;
+        b.onclick = () => { designKey = d.key; store.set('design', designKey); renderDesigns(); };
+        $('designs').append(b);
+      });
+    }
+
+    ['name', 'city', 'client', 'playlist', 'secret'].forEach(id => {
+      $(id).value = store.get(id, '');
+      $(id).addEventListener('input', () => store.set(id, $(id).value.trim()));
+    });
+
+    function renderSpotify() {
+      $('sp-linked').hidden = !spotify;
+      $('sp-steps').hidden = !!spotify;
+      if (spotify) $('sp-who').textContent = 'Spotify connected' + (spotify.who ? ' as ' + spotify.who : '');
+    }
+    $('sp-reset').onclick = () => { spotify = null; store.set('spotify', null); renderSpotify(); };
+    $('redirect').textContent = REDIRECT;
+    $('copy').onclick = () => {
+      navigator.clipboard.writeText(REDIRECT).then(() => { $('copy').textContent = 'Copied'; }, () => {});
+    };
+
+    // ---- Spotify login (PKCE) --------------------------------------------------------
+    function b64url(bytes) {
+      return btoa(String.fromCharCode.apply(null, new Uint8Array(bytes))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+
+    $('sp-login').onclick = async () => {
+      const clientId = $('client').value.trim();
+      if (!/^[0-9a-f]{32}$/i.test(clientId)) return msg('That Client ID should be 32 letters and numbers.', 'bad');
+      const verifier = b64url(crypto.getRandomValues(new Uint8Array(48)));
+      const challenge = b64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)));
+      const state = b64url(crypto.getRandomValues(new Uint8Array(12)));
+      sessionStorage.setItem('setup-pkce', JSON.stringify({ verifier, state, clientId }));
+      location.href = 'https://accounts.spotify.com/authorize?' + new URLSearchParams({
+        client_id: clientId, response_type: 'code', redirect_uri: REDIRECT, scope: SCOPES,
+        state, code_challenge_method: 'S256', code_challenge: challenge,
+      });
+    };
+
+    async function finishLogin() {
+      const q = new URLSearchParams(location.search);
+      if (!q.has('code') && !q.has('error')) return;
+      history.replaceState(null, '', REDIRECT + (ROOM ? '?room=' + ROOM : ''));
+      const pkce = JSON.parse(sessionStorage.getItem('setup-pkce') || 'null');
+      sessionStorage.removeItem('setup-pkce');
+      if (q.get('error')) return msg('Spotify said: ' + q.get('error'), 'bad');
+      if (!pkce || q.get('state') !== pkce.state) return msg('That login came back garbled. Try again.', 'bad');
+      try {
+        const r = await fetch('https://accounts.spotify.com/api/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ grant_type: 'authorization_code', code: q.get('code'), redirect_uri: REDIRECT, client_id: pkce.clientId, code_verifier: pkce.verifier }),
+        });
+        const t = await r.json();
+        if (!t.refresh_token) throw new Error(t.error_description || t.error || 'no token');
+        const me = await fetch('https://api.spotify.com/v1/me', { headers: { Authorization: 'Bearer ' + t.access_token } }).then(r => r.json()).catch(() => ({}));
+        spotify = { clientId: pkce.clientId, refreshToken: t.refresh_token, who: me.display_name || me.id || '' };
+        store.set('spotify', spotify);
+        if (me.product && me.product !== 'premium') msg('Logged in, but music on the TV needs Spotify Premium.', 'bad');
+        else msg('Spotify is ready. Press Send to TV.', 'good');
+      } catch (e) {
+        msg("Couldn't finish the Spotify login: " + e.message, 'bad');
+      }
+      renderSpotify();
+    }
+
+    // ---- the TV ----------------------------------------------------------------------
+    const TOPIC = 'realtime:tv-' + ROOM;
+    let ws = null, linked = false, ref = 0, tv = null, waiting = null;
+
+    function raw(m) {
+      m.ref = String(++ref);
+      ws.send(JSON.stringify(m));
+    }
+
+    function send(event, payload) {
+      if (linked) raw({ topic: TOPIC, event: 'broadcast', payload: { type: 'broadcast', event, payload } });
+    }
+
+    function onSetupScreen() {
+      return !!(tv && tv.app === 'launcher' && tv.screen === 'setup' && Date.now() - tv.seen < 30000);
+    }
+
+    function renderStatus() {
+      const on = onSetupScreen(), live = tv && Date.now() - tv.seen < 30000;
+      $('status').className = 'status' + (on ? ' on' : '');
+      $('status').textContent = on ? 'TV ready' : live ? 'Open Settings › Phone setup on the TV' : linked ? 'Waiting for the TV…' : 'Connecting…';
+      $('send').disabled = !on || !!waiting;
+    }
+
+    function connect() {
+      ws = new WebSocket(SUPABASE.replace(/^http/, 'ws') + '/realtime/v1/websocket?vsn=1.0.0&apikey=' + KEY);
+      ws.onopen = () => raw({ topic: TOPIC, event: 'phx_join', payload: { config: { broadcast: { self: false }, presence: { key: '' }, private: false } } });
+      ws.onmessage = m => {
+        const data = JSON.parse(m.data);
+        if (data.event === 'phx_reply' && data.topic === TOPIC && data.payload.status === 'ok' && !linked) {
+          linked = true;
+          send('hello', {});
+        } else if (data.event === 'broadcast' && data.payload.event === 'state') {
+          tv = Object.assign(data.payload.payload, { seen: Date.now() });
+        } else if (data.event === 'broadcast' && data.payload.event === 'setup-saved' && waiting) {
+          clearTimeout(waiting);
+          waiting = null;
+          msg('Saved. The TV is starting again with your settings.', 'good');
+        }
+        renderStatus();
+      };
+      ws.onclose = () => {
+        linked = false;
+        setTimeout(connect, 1500);
+      };
+    }
+    setInterval(() => { if (ws && ws.readyState === 1) raw({ topic: 'phoenix', event: 'heartbeat', payload: {} }); }, 25000);
+    setInterval(renderStatus, 2000);
+
+    $('send').onclick = () => {
+      const p = { app: 'launcher', name: $('name').value.trim().toUpperCase() || 'THERE', city: $('city').value.trim(), units, design: designKey };
+      if (spotify) Object.assign(p, { spotifyClientId: spotify.clientId, spotifyRefreshToken: spotify.refreshToken });
+      if ($('playlist').value.trim()) p.spotifyPlaylist = $('playlist').value.trim();
+      if ($('secret').value.trim()) p.spotifyClientSecret = $('secret').value.trim();
+      send('setup', p);
+      msg('Sending…');
+      waiting = setTimeout(() => {
+        waiting = null;
+        msg("The TV didn't answer. Is Phone setup still open on it?", 'bad');
+        renderStatus();
+      }, 6000);
+      renderStatus();
+    };
+
+    renderUnits();
+    renderDesigns();
+    renderSpotify();
+    if (!ROOM) {
+      $('no-room').hidden = false;
+      $('intro').hidden = true;
+      $('status').hidden = true;
+    } else {
+      $('form').hidden = false;
+      $('send-bar').hidden = false;
+      finishLogin();
+      connect();
+    }
+  </script>
+</body>
+</html>

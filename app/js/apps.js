@@ -1,13 +1,6 @@
 // Streaming apps the launcher knows about. `match` is tested against the app
 // name the TV reports; `fallbackId` is only used if the TV won't list its apps.
 const CATALOG = [
-  // HDMI inputs only appear while something is plugged into that port.
-  { key: 'hdmi1', name: 'HDMI 1', short: 'HDMI 1', color: '#FF7A1A', hdmi: 1 },
-  { key: 'hdmi2', name: 'HDMI 2', short: 'HDMI 2', color: '#FF7A1A', hdmi: 2 },
-  { key: 'hdmi3', name: 'HDMI 3', short: 'HDMI 3', color: '#FF7A1A', hdmi: 3 },
-  { key: 'hdmi4', name: 'HDMI 4', short: 'HDMI 4', color: '#FF7A1A', hdmi: 4 },
-  // Heartive is deployed alongside the launcher (see deploy.sh), so its app id is known.
-  { key: 'heartive', name: 'HEARTIVE', short: 'HEARTIVE', color: '#FF7575', appId: 'HrtvTV0001.Heartive' },
   // Plays inside the launcher with ads stripped (js/youtube.js), not in the TV's YouTube app.
   { key: 'youtube', name: 'YOUTUBE', short: 'YOUTUBE', color: '#FF2A1F', game: true },
   { key: 'netflix', name: 'NETFLIX', short: 'NETFLIX', color: '#E50914', match: /^netflix/, fallbackId: '3201907018807' },
@@ -18,6 +11,11 @@ const CATALOG = [
   { key: 'peacock', name: 'PEACOCK', short: 'PEACOCK', color: '#FFD60A', match: /peacock/, fallbackId: '3202006020991' },
   { key: 'appletv', name: 'APPLE TV', short: 'APPLE TV', color: '#B8BEC6', match: /^apple tv/, fallbackId: '3201807016597' },
   { key: 'paramount', name: 'PARAMOUNT+', short: 'PARAMOUNT+', color: '#0064FF', match: /paramount/, fallbackId: '3201710014981' },
+  { key: 'crunchyroll', name: 'CRUNCHYROLL', short: 'CRUNCHYROLL', color: '#F47521', match: /crunchyroll/ },
+  { key: 'plex', name: 'PLEX', short: 'PLEX', color: '#E5A00D', match: /^plex/ },
+  { key: 'tubi', name: 'TUBI', short: 'TUBI', color: '#7408FF', match: /^tubi/ },
+  { key: 'twitch', name: 'TWITCH', short: 'TWITCH', color: '#9146FF', match: /^twitch/ },
+  { key: 'espn', name: 'ESPN', short: 'ESPN', color: '#D50A0A', match: /^espn/ },
   { key: 'spotify', name: 'SPOTIFY', short: 'SPOTIFY', color: '#1DB954', match: /^spotify/, fallbackId: '3201606009684' },
   // Not apps: plain screens. `key` is the screen; `group: 'games'` puts it in the home screen's GAMES folder.
   { key: 'flappy', name: 'FLAPPY BIRD', short: 'FLAPPY', color: '#F4F6F8', game: true, group: 'games' },
@@ -35,6 +33,17 @@ const CATALOG = [
   { key: 'pong', name: 'PONG', short: 'PONG', color: '#F4F6F8', game: true, group: 'games', multi: 'touch' },
   { key: 'cycles', name: 'LIGHT CYCLES', short: 'CYCLES', color: '#F4F6F8', game: true, group: 'games', multi: 'pad' },
   { key: 'popeyes', name: 'POPEYES MENU', short: 'POPEYES', color: '#F26A1B', game: true },
+  // HDMI inputs only appear while something is plugged into that port.
+  { key: 'hdmi1', name: 'HDMI 1', short: 'HDMI 1', color: '#FF7A1A', hdmi: 1 },
+  { key: 'hdmi2', name: 'HDMI 2', short: 'HDMI 2', color: '#FF7A1A', hdmi: 2 },
+  { key: 'hdmi3', name: 'HDMI 3', short: 'HDMI 3', color: '#FF7A1A', hdmi: 3 },
+  { key: 'hdmi4', name: 'HDMI 4', short: 'HDMI 4', color: '#FF7A1A', hdmi: 4 },
 ];
 
-const DEFAULT_ON = ['hdmi1', 'hdmi2', 'hdmi3', 'hdmi4', 'heartive', 'youtube', 'netflix', 'flappy', 'dino', 'stack', 'blackjack', 'roulette', 'wordle', 'trivia', 'ttt', 'hockey', 'pong', 'cycles', 'popeyes'];
+const DEFAULT_ON = ['youtube', 'netflix', 'hulu', 'disney', 'prime', 'max', 'peacock', 'appletv', 'paramount', 'crunchyroll', 'plex', 'tubi', 'twitch', 'espn', 'flappy', 'dino', 'stack', 'blackjack', 'roulette', 'wordle', 'trivia', 'ttt', 'hockey', 'pong', 'cycles', 'popeyes', 'hdmi1', 'hdmi2', 'hdmi3', 'hdmi4'];
+
+// Your own apps from config.local.js, first and on by default:
+//   apps: [{ key: 'myapp', name: 'MY APP', short: 'MY APP', color: '#FF7575', appId: 'Abc1234567.MyApp' }]
+// A logo at img/logos/<key>.png shows when one is selected.
+CATALOG.unshift(...(CONFIG.apps || []));
+(CONFIG.apps || []).forEach(a => DEFAULT_ON.push(a.key));

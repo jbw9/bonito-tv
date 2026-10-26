@@ -1,5 +1,5 @@
-// Game leaderboards, shared through Supabase (see supabase.sql) with plain fetch, the
-// same way Heartive syncs. Every new record adds a row; boards keep each name's best.
+// Game leaderboards, shared through Supabase (see supabase.sql) with plain fetch.
+// Every new record adds a row; boards keep each name's best.
 // Boards are cached so the menus work offline, and scores that couldn't be sent are
 // kept and retried on the next load.
 const Scores = (() => {

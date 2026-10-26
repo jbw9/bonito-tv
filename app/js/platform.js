@@ -1,24 +1,34 @@
-// Everything that differs between the Samsung TV (Tizen) and a desktop browser preview.
+// Everything that differs between a Samsung TV (Tizen), the Android TV / Google TV /
+// Fire TV app (android/), a TV's own web browser (?web) and a desktop browser preview,
+// which is also the website's demo TV.
 const Platform = (() => {
   const isTV = typeof window.tizen !== 'undefined' && !!window.tizen.application;
-  const installed = {}; // catalog key -> Tizen app id
+  const android = !isTV && window.AndroidTV;
+  const web = !isTV && !android && param('web') != null;
+  const installed = {}; // catalog key -> Tizen app id or Android package
   const hdmiSources = {}; // HDMI port number -> connected video source
   let scanned = false;
 
+  function param(name) {
+    return new URLSearchParams(location.search).get(name);
+  }
+
   function scanApps() {
     return new Promise(resolve => {
+      const found = list => {
+        list.forEach(info => {
+          const name = String(info.name || '').trim().toLowerCase();
+          CATALOG.forEach(app => {
+            if (app.appId ? info.id === app.appId : app.match && !installed[app.key] && app.match.test(name)) installed[app.key] = info.id;
+          });
+        });
+        scanned = true;
+        resolve();
+      };
+      if (android) return found(JSON.parse(AndroidTV.apps()).map(a => ({ id: a.pkg, name: a.label })));
       if (!isTV) return resolve();
       try {
-        tizen.application.getAppsInfo(list => {
-          list.forEach(info => {
-            const name = String(info.name || '').trim().toLowerCase();
-            CATALOG.forEach(app => {
-              if (app.appId ? info.id === app.appId : app.match && !installed[app.key] && app.match.test(name)) installed[app.key] = info.id;
-            });
-          });
-          scanned = true;
-          resolve();
-        }, () => resolve());
+        tizen.application.getAppsInfo(found, () => resolve());
       } catch (e) {
         resolve();
       }
@@ -45,10 +55,13 @@ const Platform = (() => {
     } catch (e) {}
   }
 
+  // In a TV's browser only the games and screens drawn here work; the preview shows
+  // everything, with two HDMI inputs.
   function isAvailable(app) {
     if (app.game) return true;
-    if (app.hdmi) return isTV ? !!hdmiSources[app.hdmi] : app.hdmi <= 2;
-    return !isTV || !scanned || !!installed[app.key];
+    if (app.hdmi) return isTV ? !!hdmiSources[app.hdmi] : !android && !web && app.hdmi <= 2;
+    if (web) return false;
+    return !(isTV || android) || !scanned || !!installed[app.key];
   }
 
   // Shows an HDMI input full-screen on top of the launcher.
@@ -82,6 +95,7 @@ const Platform = (() => {
   function launch(app) {
     if (app.hdmi) return showInput(app);
     return new Promise(resolve => {
+      if (android) return resolve(AndroidTV.launch(installed[app.key] || app.appId || '') ? 'ok' : 'error');
       if (!isTV) {
         console.log('[preview] would launch', app.name);
         return resolve('preview');
@@ -101,6 +115,10 @@ const Platform = (() => {
   // TV volume, changed by 'up', 'down' or 'mute' (which flips it). Returns
   // { level, muted }, or null off the TV.
   function volume(change) {
+    if (android) {
+      const v = AndroidTV.volume(change || '');
+      return v ? JSON.parse(v) : null;
+    }
     if (!isTV) return null;
     try {
       const a = tizen.tvaudiocontrol;
@@ -115,6 +133,7 @@ const Platform = (() => {
 
   function exit() {
     if (isTV) tizen.application.getCurrentApplication().exit();
+    else if (android) AndroidTV.exit();
   }
 
   // Remote keys on Tizen; keyboard equivalents for the desktop preview.
@@ -163,5 +182,5 @@ const Platform = (() => {
     return { temp: Math.round(w.current.temperature_2m), code: w.current.weather_code, day: !!w.current.is_day };
   }
 
-  return { isTV, scanApps, scanInputs, isAvailable, launch, hideInput, volume, exit, keyName, load, save, weather };
+  return { isTV, android: !!android, web, param, scanApps, scanInputs, isAvailable, launch, hideInput, volume, exit, keyName, load, save, weather };
 })();

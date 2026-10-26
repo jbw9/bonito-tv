@@ -3,7 +3,7 @@
 // of a second, where the jam's request rows (polled every second) would feel laggy.
 // Nothing is stored; the TV broadcasts what it's showing and phones send presses back.
 const Phones = (() => {
-  const TOPIC = 'realtime:tv-HOME'; // one TV, one fixed room, as in js/jam.js
+  const TOPIC = 'realtime:tv-' + ROOM; // this TV's own room (js/main.js)
   const KEYS = ['up', 'down', 'left', 'right', 'ok', 'back'];
   let ws = null, joined = false, ref = 0, sent = '', sentAt = 0, shownAt = 0, vol = null, volAt = -1e9;
 
@@ -11,9 +11,11 @@ const Phones = (() => {
     return !!(CONFIG.jamUrl && CONFIG.supabaseUrl);
   }
 
-  // The jam page, opened on a tab: 'remote', 'spotify' or 'games'.
+  // The jam page for this TV's room, opened on a tab: 'remote', 'spotify' or 'games'.
+  // 'setup' is the setup page next to it (setup/index.html).
   function url(tab) {
-    return CONFIG.jamUrl + (tab ? '#' + tab : '');
+    if (tab === 'setup') return new URL('../setup/?room=' + ROOM, CONFIG.jamUrl).href;
+    return CONFIG.jamUrl + '?room=' + ROOM + (tab ? '#' + tab : '');
   }
 
   function raw(msg) {
@@ -47,7 +49,7 @@ const Phones = (() => {
   }
 
   function receive(event, p) {
-    // Phones address the app they last heard from (Heartive has its own link), and
+    // Phones address the app they last heard from (other apps may have their own link), and
     // presses queued up while the launcher was hidden behind another app are dropped.
     if (p.app && p.app !== 'launcher') return;
     if (event !== 'hello' && (document.hidden || performance.now() - shownAt < 1000)) return;
@@ -121,5 +123,5 @@ const Phones = (() => {
     g.fillRect(x + 260, y + 34, 220 * Math.min(100, vol.level) / 100, 8);
   }
 
-  return { start, enabled, url, draw };
+  return { start, enabled, url, draw, send };
 })();

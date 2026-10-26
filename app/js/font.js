@@ -68,9 +68,10 @@ function isLit(rows, x, y) {
   return y >= 0 && y < rows.length && x >= 0 && x < rows[y].length && rows[y][x] === '#';
 }
 
-// Round LED dots; unlit cells glow faintly like a real dot-matrix panel.
+// LED dots, round or square as the design says (js/designs.js); unlit cells glow
+// faintly like a real dot-matrix panel.
 function drawLedRows(g, rows, ox, oy, cell, color, dimAlpha) {
-  const r = cell * 0.36;
+  const r = cell * 0.36, square = design.dots !== 'round', s = cell * 0.8;
   const lit = new Path2D();
   const dim = new Path2D();
   for (let y = 0; y < rows.length; y++) {
@@ -78,6 +79,10 @@ function drawLedRows(g, rows, ox, oy, cell, color, dimAlpha) {
       const cx = ox + (x + 0.5) * cell;
       const cy = oy + (y + 0.5) * cell;
       const p = rows[y][x] === '#' ? lit : dim;
+      if (square) {
+        p.rect(cx - s / 2, cy - s / 2, s, s);
+        continue;
+      }
       p.moveTo(cx + r, cy);
       p.arc(cx, cy, r, 0, Math.PI * 2);
     }
@@ -128,15 +133,29 @@ function renderText(str, cell, color, style) {
   let c = textCache.get(key);
   if (c) return c;
   if (textCache.size > 400) textCache.clear();
+  // Flap tiles reach past the letters, so they get a wider margin.
+  const flap = style === 'led' && design.dots === 'flap';
+  const pad = flap ? Math.ceil(cell * 0.6) + 2 : 2;
   c = document.createElement('canvas');
-  c.width = Math.ceil(textWidth(str, cell)) + 4;
-  c.height = Math.ceil(7 * cell) + 4;
+  c.width = Math.ceil(textWidth(str, cell)) + pad * 2;
+  c.height = Math.ceil(7 * cell) + pad * 2;
+  c.pad = pad;
   const g = c.getContext('2d');
   for (let i = 0; i < str.length; i++) {
     const rows = GLYPHS[str[i]] || GLYPHS[' '];
-    const ox = 2 + i * 6 * cell;
-    if (style === 'thin') drawThinRows(g, rows, ox, 2, cell, color);
-    else drawLedRows(g, rows, ox, 2, cell, color, 0.12);
+    const ox = pad + i * 6 * cell;
+    if (flap) {
+      g.fillStyle = '#222222';
+      g.fillRect(ox - 0.35 * cell, pad - 0.5 * cell, 5.7 * cell, 8 * cell);
+    }
+    if (style === 'thin') drawThinRows(g, rows, ox, pad, cell, color);
+    // Flaps and teletext pixels have no unlit dots.
+    else drawLedRows(g, rows, ox, pad, cell, color, design.dots === 'round' ? 0.12 : 0);
+    // The split between the top and bottom flap, through the middle of the letter.
+    if (flap) {
+      g.fillStyle = '#060606';
+      g.fillRect(ox - 0.35 * cell, pad + 3.42 * cell, 5.7 * cell, Math.max(1, 0.16 * cell));
+    }
   }
   textCache.set(key, c);
   return c;
@@ -151,7 +170,7 @@ function drawText(g, str, x, y, cell, color, opts) {
   if (opts.align === 'center') x -= w / 2;
   else if (opts.align === 'right') x -= w;
   g.globalAlpha = opts.alpha == null ? 1 : opts.alpha;
-  g.drawImage(c, x - 2, y - 2);
+  g.drawImage(c, x - c.pad, y - c.pad);
   g.globalAlpha = 1;
   return w;
 }

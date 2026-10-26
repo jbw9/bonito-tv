@@ -115,6 +115,14 @@
     .skeleton .bar { height: 12px; border-radius: 6px; background: var(--highlight); margin: 7px 0; }
     @keyframes pulse { 50% { opacity: .45; } }
     .note { color: var(--sub); padding: 28px 0; text-align: center; }
+    #join { max-width: 420px; margin: 0 auto; padding: 18vh 24px 0; text-align: center; }
+    #join h1 { margin: 0 0 10px; font-size: 28px; font-weight: 800; letter-spacing: -.02em; }
+    #join p { margin: 0 0 24px; color: var(--sub); }
+    #join input {
+      width: 100%; padding: 14px 16px; border: 0; border-radius: 10px; background: var(--highlight); color: var(--ink);
+      font: 700 20px Figtree, sans-serif; letter-spacing: .14em; text-align: center; text-transform: uppercase;
+    }
+    #join button { width: 100%; margin-top: 12px; padding: 14px; border-radius: 999px; background: var(--green); color: #000; font-weight: 800; }
 
     #mini {
       position: fixed; left: 8px; right: 8px; bottom: calc(72px + env(safe-area-inset-bottom)); z-index: 4;
@@ -214,6 +222,12 @@
   </style>
 </head>
 <body>
+  <form id="join" hidden>
+    <h1>Which TV?</h1>
+    <p>Scan the QR code under CONNECT PHONE on your TV's home screen, or type the room code shown under it.</p>
+    <input id="join-code" placeholder="Room code" autocomplete="off" autocapitalize="characters" maxlength="9">
+    <button>Connect</button>
+  </form>
   <main>
     <section id="tab-remote" hidden>
       <div class="top"><div class="bar"><h1>Remote</h1><div class="device" id="device-remote"></div></div></div>
@@ -221,7 +235,7 @@
       <div class="pills" id="remote-pills"></div>
       <div class="volume" id="remote-volume"></div>
       <div id="remote-kbd"></div>
-      <div class="hint">Hold an arrow to keep moving. Works in the launcher and Heartive.</div>
+      <div class="hint">Hold an arrow to keep moving.</div>
     </section>
     <section id="tab-games" hidden>
       <div class="top"><div class="bar"><h1>Games</h1><div class="device" id="device-games"></div></div></div>
@@ -272,7 +286,15 @@
     // key is meant to be public.
     const SUPABASE = 'https://jbvkjvdthuzofvmhwctv.supabase.co';
     const KEY = 'sb_publishable_hbxcjbYF5H8py5gGLokxPg_tD9nGsNl';
-    const ROOM = 'HOME';
+    // The TV's room, from its QR code (?room=) and remembered after, so this page
+    // reaches that TV and no other.
+    const ROOM = (() => {
+      const asked = (new URLSearchParams(location.search).get('room') || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+      try {
+        if (asked) localStorage.setItem('jam-room', asked);
+        return asked || localStorage.getItem('jam-room') || '';
+      } catch (e) { return asked; }
+    })();
     const REST = SUPABASE + '/rest/v1/';
     const $ = id => document.getElementById(id);
     const ICON = {
@@ -344,7 +366,7 @@
     function insert(row) {
       return fetch(REST + 'jam', {
         method: 'POST',
-        headers: { apikey: KEY, 'Content-Type': 'application/json', Prefer: 'return=representation' },
+        headers: { apikey: KEY, 'x-room': ROOM, 'Content-Type': 'application/json', Prefer: 'return=representation' },
         body: JSON.stringify(Object.assign({ code: ROOM }, row)),
       }).then(r => {
         if (!r.ok) throw new Error("Couldn't reach the jam");
@@ -357,7 +379,7 @@
       const started = Date.now();
       return new Promise((resolve, reject) => {
         (function check() {
-          fetch(REST + 'jam?select=results&id=eq.' + id, { headers: { apikey: KEY } })
+          fetch(REST + 'jam?select=results&id=eq.' + id, { headers: { apikey: KEY, 'x-room': ROOM } })
             .then(r => r.json())
             .then(rows => {
               const res = rows[0] && rows[0].results;
@@ -940,7 +962,7 @@
     }
 
     function loadState() {
-      return fetch(REST + 'jam?select=results&kind=eq.state&code=eq.' + ROOM, { headers: { apikey: KEY } })
+      return fetch(REST + 'jam?select=results&kind=eq.state&code=eq.' + ROOM, { headers: { apikey: KEY, 'x-room': ROOM } })
         .then(r => r.json())
         .then(rows => {
           const res = (rows[0] && rows[0].results) || null;
@@ -995,7 +1017,7 @@
       ws.send(JSON.stringify(msg));
     }
 
-    // Addressed to whichever app (launcher or Heartive) last said it's in front.
+    // Addressed to whichever app on the TV last said it's in front.
     function send(event, payload) {
       payload = Object.assign({ app: tv && tv.app }, payload);
       if (linked) raw({ topic: TOPIC, event: 'broadcast', payload: { type: 'broadcast', event, payload } });
@@ -1389,8 +1411,8 @@
       if (seat) document.documentElement.style.setProperty('--seat', seat.color);
       if (!tvLive()) {
         now.append(el('div', 'note', linked ? 'Open the launcher on the TV to play.' : 'Connecting to the TV…'));
-      } else if (tv.app === 'heartive') {
-        now.append(el('div', 'note', 'Heartive is open on the TV. Press Home on the Remote tab to come back to the games.'));
+      } else if (tv.app && tv.app !== 'launcher') {
+        now.append(el('div', 'note', 'Another app is open on the TV. Press Home on the Remote tab to come back to the games.'));
       } else if (g) {
         const card = el('div', 'on-tv');
         card.append(el('small', null, 'On the TV'), el('b', null, titleCase(g.name)));
@@ -1452,7 +1474,7 @@
 
       const list = $('game-list');
       list.textContent = '';
-      if (!tvLive() || tv.app === 'heartive') return;
+      if (!tvLive() || (tv.app && tv.app !== 'launcher')) return;
       list.append(el('h2', null, g ? 'Switch game' : 'Pick a game'));
       tv.games.forEach(game => {
         const row = button('game-row', 'Play ' + game.name, () => {
@@ -1492,16 +1514,26 @@
     let saved = null;
     try { saved = localStorage.getItem('jam-tab'); } catch (e) {}
     showTab(['remote', 'spotify', 'games'].indexOf(asked) >= 0 ? asked : saved || 'remote');
-    connect();
-    renderGames();
-    setInterval(renderGames, 3000);
+    if (!ROOM) {
+      document.querySelector('main').style.display = $('tabs').style.display = 'none';
+      $('join').hidden = false;
+      $('join').onsubmit = e => {
+        e.preventDefault();
+        const code = $('join-code').value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        if (code) location.search = '?room=' + code;
+      };
+    } else {
+      connect();
+      renderGames();
+      setInterval(renderGames, 3000);
 
-    renderDevice();
-    renderNow();
-    renderLibrary();
-    loadState();
-    setInterval(loadState, 2500);
-    setInterval(renderPlayback, 500);
+      renderDevice();
+      renderNow();
+      renderLibrary();
+      loadState();
+      setInterval(loadState, 2500);
+      setInterval(renderPlayback, 500);
+    }
   </script>
 </body>
 </html>
