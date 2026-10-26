@@ -3,96 +3,110 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0e0f12">
+  <meta name="theme-color" content="#121212">
   <title>Jam</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #0e0f12;
-      --panel: #181a1f;
-      --panel-2: #22252b;
-      --line: #2a2d34;
-      --ink: #f4f6f8;
-      --muted: #8b919a;
-      --green: #1db954;
-      --red: #ff6b6b;
+      --bg: #121212;
+      --highlight: #2a2a2a;
+      --ink: #ffffff;
+      --sub: #b3b3b3;
+      --dim: #727272;
+      --green: #1ed760;
+      --red: #e22134;
+      --tint: #404040;
     }
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     html, body { margin: 0; background: var(--bg); color: var(--ink); }
-    body { font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; min-height: 100vh; }
-    main { max-width: 560px; margin: 0 auto; padding: 0 16px 96px; }
+    body {
+      font: 16px/1.35 Figtree, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh; -webkit-font-smoothing: antialiased;
+    }
+    button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+    main { max-width: 560px; margin: 0 auto; padding: 0 16px 120px; }
+    svg { display: block; }
 
     .top {
-      position: sticky; top: 0; z-index: 2;
-      padding: calc(14px + env(safe-area-inset-top)) 0 12px;
-      background: linear-gradient(var(--bg) 80%, transparent);
+      position: sticky; top: 0; z-index: 3; margin: 0 -16px; padding: calc(12px + env(safe-area-inset-top)) 16px 10px;
+      background: var(--bg);
     }
-    .brand { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-    .brand h1 { margin: 0; font-size: 22px; letter-spacing: .12em; }
-    .brand h1 span { color: var(--green); }
-    .tv { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; }
-    .tv i { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
-    .tv.on i { background: var(--green); box-shadow: 0 0 8px var(--green); }
-
-    .search { position: relative; }
-    .search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); }
-    input {
-      width: 100%; border: 1px solid var(--line); border-radius: 14px;
-      background: var(--panel); color: var(--ink); font: inherit; outline: none;
-      -webkit-appearance: none; appearance: none;
+    .bar { display: flex; align-items: center; justify-content: space-between; height: 40px; margin-bottom: 10px; }
+    .bar h1 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -.02em; }
+    .device { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--dim); }
+    .device.on { color: var(--green); }
+    .search { position: relative; display: block; }
+    .search > svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #121212; }
+    input { font: inherit; outline: none; -webkit-appearance: none; appearance: none; border: 0; }
+    #query {
+      width: 100%; height: 46px; padding: 0 44px; border-radius: 8px;
+      background: #fff; color: #121212; font-size: 16px; font-weight: 500;
     }
-    input:focus { border-color: var(--green); }
-    #query { padding: 15px 44px; font-size: 17px; }
-    #clear {
-      position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
-      width: 32px; height: 32px; border: 0; border-radius: 50%;
-      background: var(--panel-2); color: var(--muted); font-size: 18px; line-height: 1; display: none;
+    #query::placeholder { color: #535353; }
+    #query::-webkit-search-cancel-button { display: none; }
+    #clear { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 34px; height: 34px; color: #121212; display: none; }
+    #clear svg { margin: auto; }
+    #name {
+      margin-top: 8px; height: 32px; padding: 0 14px; border-radius: 999px;
+      background: var(--highlight); color: var(--ink); font-size: 13px; font-weight: 500; width: 100%;
     }
-    #name { margin-top: 8px; padding: 10px 14px; font-size: 14px; background: transparent; }
+    #name::placeholder { color: var(--sub); }
 
-    .now { position: relative; margin-top: 8px; border-radius: 20px; overflow: hidden; background: var(--panel); }
-    .now .blur { position: absolute; inset: -40px; background-size: cover; background-position: center; filter: blur(40px) saturate(1.4); opacity: .55; }
-    .now .inner { position: relative; padding: 20px; display: flex; flex-direction: column; align-items: center; text-align: center; }
-    .now img { width: min(64vw, 260px); aspect-ratio: 1; border-radius: 12px; box-shadow: 0 16px 40px rgba(0,0,0,.5); object-fit: cover; background: var(--panel-2); }
-    .label { color: var(--muted); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; }
-    .now .label { margin: 16px 0 4px; color: rgba(255,255,255,.75); }
-    .now .title { font-size: 22px; font-weight: 700; }
-    .now .artist { color: rgba(255,255,255,.75); }
-    .idle { padding: 36px 20px; text-align: center; color: var(--muted); }
+    .hero { margin: 6px -16px 0; padding: 22px 16px 18px; background: linear-gradient(var(--tint), var(--bg)); }
+    .hero .art-big { width: min(72vw, 300px); aspect-ratio: 1; margin: 0 auto; display: block; border-radius: 4px; object-fit: cover; box-shadow: 0 8px 32px rgba(0,0,0,.55); background: var(--highlight); }
+    .hero .title { margin-top: 22px; font-size: 22px; font-weight: 800; letter-spacing: -.01em; }
+    .hero .artist { color: var(--sub); font-size: 15px; margin-top: 2px; }
+    .playing-on { display: flex; align-items: center; gap: 8px; margin-top: 14px; color: var(--green); font-size: 13px; font-weight: 700; }
+    .idle { padding: 64px 8px; text-align: center; color: var(--sub); }
+    .idle b { display: block; color: var(--ink); font-size: 20px; margin-bottom: 6px; }
 
-    .chips { display: flex; gap: 8px; margin: 14px 0 4px; overflow-x: auto; }
-    .chip {
-      flex: none; border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px;
-      background: var(--panel); color: var(--ink); font: inherit; font-size: 14px;
-    }
+    .chips { display: flex; gap: 8px; margin: 18px 0 2px; overflow-x: auto; scrollbar-width: none; }
+    .chip { flex: none; height: 32px; padding: 0 14px; border-radius: 999px; background: var(--highlight); font-size: 14px; font-weight: 500; }
 
-    h2 { margin: 24px 0 6px; }
+    h2 { margin: 26px 0 8px; font-size: 18px; font-weight: 700; }
+    h2 small { display: block; color: var(--sub); font-size: 13px; font-weight: 500; margin-top: 2px; }
     ul { list-style: none; margin: 0; padding: 0; }
-    li { display: flex; align-items: center; gap: 12px; padding: 9px 0; }
-    li + li { border-top: 1px solid var(--line); }
-    li img, li .art { width: 48px; height: 48px; border-radius: 8px; background: var(--panel-2); flex: none; object-fit: cover; }
+    .row { position: relative; overflow: hidden; }
+    .fg { position: relative; display: flex; align-items: center; gap: 12px; padding: 8px 0; background: var(--bg); touch-action: pan-y; }
+    .row img, .row .art { width: 48px; height: 48px; border-radius: 4px; flex: none; object-fit: cover; background: var(--highlight); }
     .meta { flex: 1; min-width: 0; }
     .meta .name, .meta .sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .meta .sub { color: var(--muted); font-size: 14px; }
-    .by { color: var(--green); }
-    .add {
-      flex: none; min-width: 64px; height: 36px; padding: 0 14px; border: 0; border-radius: 999px;
-      background: var(--green); color: #04120a; font: inherit; font-size: 14px; font-weight: 700;
-    }
-    .add:disabled { opacity: .6; }
-    .add.done { background: transparent; color: var(--green); box-shadow: inset 0 0 0 1px var(--green); }
-    .add.failed { background: transparent; color: var(--red); box-shadow: inset 0 0 0 1px var(--red); }
-    .skeleton li .art, .skeleton .bar { animation: pulse 1.2s ease-in-out infinite; }
-    .skeleton .bar { height: 12px; border-radius: 6px; background: var(--panel-2); margin: 6px 0; }
+    .meta .name { font-size: 16px; font-weight: 500; }
+    .meta .sub { color: var(--sub); font-size: 14px; }
+    .meta .sub .by { color: var(--green); }
+    .meta .sub .next { color: var(--green); font-weight: 700; }
+    .icon-btn { width: 44px; height: 44px; flex: none; display: grid; place-items: center; color: var(--sub); }
+    .icon-btn.added { color: var(--green); }
+    .icon-btn:disabled { opacity: .5; }
+    .handle { width: 44px; height: 48px; flex: none; display: grid; place-items: center; color: var(--sub); touch-action: none; cursor: grab; }
+    .del { position: absolute; inset: 0; display: flex; align-items: center; justify-content: flex-end; padding-right: 20px; background: var(--red); font-weight: 700; font-size: 14px; }
+    .pick.dragging { z-index: 2; }
+    .pick.dragging .fg { background: var(--highlight); box-shadow: 0 6px 20px rgba(0,0,0,.5); border-radius: 6px; }
+    .pick.settle, .pick.settle .fg { transition: transform .2s ease; }
+    .pick.gone { transition: height .2s ease, opacity .2s ease; height: 0 !important; opacity: 0; }
+    .skeleton .art, .skeleton .bar { animation: pulse 1.2s ease-in-out infinite; }
+    .skeleton .bar { height: 12px; border-radius: 6px; background: var(--highlight); margin: 7px 0; }
     @keyframes pulse { 50% { opacity: .45; } }
-    .note { color: var(--muted); padding: 18px 0; text-align: center; }
-    .note.error { color: var(--red); }
+    .note { color: var(--sub); padding: 28px 0; text-align: center; }
+
+    #mini {
+      position: fixed; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom)); z-index: 4;
+      max-width: 544px; margin: 0 auto; display: flex; align-items: center; gap: 10px; padding: 8px;
+      border-radius: 8px; background: #2b2b2b; background: color-mix(in srgb, var(--tint) 70%, #000); box-shadow: 0 4px 20px rgba(0,0,0,.4);
+    }
+    #mini[hidden] { display: none; }
+    #mini img, #mini .art { width: 40px; height: 40px; border-radius: 4px; object-fit: cover; }
+    #mini .meta .name { font-size: 14px; font-weight: 700; }
+    #mini .meta .sub { color: var(--green); font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 4px; }
 
     #toast {
-      position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom));
-      transform: translate(-50%, 16px); opacity: 0; pointer-events: none; transition: transform .25s ease, opacity .25s ease;
-      max-width: calc(100% - 32px); padding: 12px 18px; border-radius: 999px;
-      background: var(--ink); color: var(--bg); font-weight: 600; font-size: 14px;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      position: fixed; left: 50%; bottom: calc(80px + env(safe-area-inset-bottom)); z-index: 5;
+      transform: translate(-50%, 12px); opacity: 0; pointer-events: none; transition: transform .2s ease, opacity .2s ease;
+      max-width: calc(100% - 32px); padding: 12px 16px; border-radius: 8px;
+      background: #fff; color: #121212; font-weight: 700; font-size: 14px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 4px 20px rgba(0,0,0,.4);
     }
     #toast.show { transform: translate(-50%, 0); opacity: 1; }
   </style>
@@ -100,31 +114,45 @@
 <body>
   <main>
     <div class="top">
-      <div class="brand">
-        <h1>JAM<span>.</span></h1>
-        <div class="tv" id="tv"><i></i><span>Connecting</span></div>
+      <div class="bar">
+        <h1>Jam</h1>
+        <div class="device" id="device"></div>
       </div>
-      <div class="search">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-        <input id="query" type="search" maxlength="200" placeholder="Add a song" enterkeyhint="search" autocomplete="off" autocorrect="off">
-        <button id="clear" aria-label="Clear">×</button>
-      </div>
+      <label class="search">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.8-4.8"/></svg>
+        <input id="query" type="search" maxlength="200" placeholder="What do you want to listen to?" enterkeyhint="search" autocomplete="off" autocorrect="off" spellcheck="false">
+        <button id="clear" type="button" aria-label="Clear search"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      </label>
       <input id="name" maxlength="24" placeholder="Your name (optional)" autocomplete="nickname">
     </div>
-    <div id="home"></div>
+    <div id="home">
+      <div id="now"></div>
+      <div id="chips" class="chips"></div>
+      <div id="queue"></div>
+    </div>
     <div id="results" hidden></div>
   </main>
+  <div id="mini" hidden></div>
   <div id="toast"></div>
   <script>
     // Guests' side of the launcher's jam (app/js/jam.js). Requests are rows in the
-    // Supabase table `jam`; the TV answers each one, and keeps a 'state' row with the
-    // queue. The publishable key is meant to be public.
+    // Supabase table `jam` that the TV answers; it also keeps a 'state' row with what's
+    // playing, the jam picks (reorderable, removable), Spotify's own upcoming tracks and
+    // an app-only Spotify token so search can go straight to Spotify. The publishable
+    // key is meant to be public.
     const SUPABASE = 'https://jbvkjvdthuzofvmhwctv.supabase.co';
     const KEY = 'sb_publishable_hbxcjbYF5H8py5gGLokxPg_tD9nGsNl';
     const ROOM = 'HOME';
     const REST = SUPABASE + '/rest/v1/';
     const $ = id => document.getElementById(id);
-    let state = null, searchSeq = 0, debounce = null, toastTimer = null;
+    const ICON = {
+      speaker: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 4V5L7 9H3z"/><path d="M16 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+      add: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9.5"/><path d="M12 7.5v9M7.5 12h9" stroke-linecap="round"/></svg>',
+      added: '<svg width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="currentColor"/><path d="m7.5 12.2 3 3 6-6.4" fill="none" stroke="#121212" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      handle: '<svg width="20" height="20" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 8h16M4 12h16M4 16h16"/></svg>',
+    };
+    let state = null, lastJson = '', searchSeq = 0, debounce = null, toastTimer = null, gesture = false, pendingEdits = 0;
+    const tints = {};
 
     function el(tag, cls, text) {
       const e = document.createElement(tag);
@@ -133,9 +161,9 @@
       return e;
     }
 
-    function art(url) {
-      const e = el(url ? 'img' : 'div', 'art');
-      if (url) { e.src = url; e.alt = ''; e.loading = 'lazy'; }
+    function art(url, cls) {
+      const e = el(url ? 'img' : 'div', cls || 'art');
+      if (url) { e.src = url; e.alt = ''; }
       return e;
     }
 
@@ -143,7 +171,30 @@
       $('toast').textContent = text;
       $('toast').classList.add('show');
       clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => $('toast').classList.remove('show'), 2600);
+      toastTimer = setTimeout(() => $('toast').classList.remove('show'), 2400);
+    }
+
+    // Background colour from the album art, like Spotify's now-playing gradient.
+    function tint(url) {
+      if (!url) return;
+      if (tints[url]) return document.documentElement.style.setProperty('--tint', tints[url]);
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        try {
+          const c = document.createElement('canvas');
+          c.width = c.height = 12;
+          const g = c.getContext('2d');
+          g.drawImage(img, 0, 0, 12, 12);
+          const d = g.getImageData(0, 0, 12, 12).data;
+          let r = 0, gr = 0, b = 0;
+          for (let i = 0; i < d.length; i += 4) { r += d[i]; gr += d[i + 1]; b += d[i + 2]; }
+          const n = d.length / 4, max = Math.max(r, gr, b) / n || 1, k = Math.min(1.4, 150 / max);
+          tints[url] = 'rgb(' + [r, gr, b].map(v => Math.round(v / n * k)).join(',') + ')';
+          document.documentElement.style.setProperty('--tint', tints[url]);
+        } catch (e) {}
+      };
+      img.src = url;
     }
 
     function insert(row) {
@@ -152,7 +203,7 @@
         headers: { apikey: KEY, 'Content-Type': 'application/json', Prefer: 'return=representation' },
         body: JSON.stringify(Object.assign({ code: ROOM }, row)),
       }).then(r => {
-        if (!r.ok) throw new Error("Couldn't reach the jam.");
+        if (!r.ok) throw new Error("Couldn't reach the jam");
         return r.json();
       }).then(rows => rows[0].id);
     }
@@ -168,85 +219,15 @@
               const res = rows[0] && rows[0].results;
               if (res && res.error) return reject(new Error(res.error));
               if (res) return resolve(res);
-              if (Date.now() - started > 12000) return reject(new Error("The TV isn't answering. Is the launcher open?"));
-              setTimeout(check, 400);
+              if (Date.now() - started > 12000) return reject(new Error("The TV isn't answering"));
+              setTimeout(check, 300);
             }, reject);
         })();
       });
     }
 
-    function guestName() {
-      return $('name').value.trim().slice(0, 24) || null;
-    }
-
-    function addButton(t) {
-      const btn = el('button', 'add', 'Add');
-      btn.onclick = () => {
-        btn.disabled = true;
-        btn.textContent = '…';
-        insert({ kind: 'add', query: t.uri, name: guestName(), title: (t.name + ' - ' + t.artist).slice(0, 200) })
-          .then(answer)
-          .then(() => {
-            btn.textContent = 'Added';
-            btn.className = 'add done';
-            toast(t.name + ' is in the queue');
-            setTimeout(loadState, 1500);
-          }, err => {
-            btn.disabled = false;
-            btn.textContent = 'Retry';
-            btn.className = 'add failed';
-            toast(err.message);
-          });
-      };
-      return btn;
-    }
-
-    function trackRow(t, withAdd) {
-      const li = el('li');
-      const meta = el('div', 'meta');
-      meta.append(el('div', 'name', t.name));
-      const sub = el('div', 'sub', t.artist);
-      if (t.by) {
-        sub.append(' · ');
-        sub.append(el('span', 'by', 'added by ' + t.by));
-      }
-      meta.append(sub);
-      li.append(art(t.image), meta);
-      if (withAdd) li.append(addButton(t));
-      return li;
-    }
-
-    function renderHome() {
-      const home = $('home');
-      home.textContent = '';
-      const now = state && state.now;
-      const box = el('div', 'now');
-      if (now) {
-        const blur = el('div', 'blur');
-        if (now.image) blur.style.backgroundImage = 'url("' + now.image + '")';
-        const inner = el('div', 'inner');
-        inner.append(art(now.image), el('div', 'label', 'Now playing'), el('div', 'title', now.name), el('div', 'artist', now.artist));
-        box.append(blur, inner);
-      } else {
-        box.append(el('div', 'idle', tvOn() ? 'Nothing playing yet. Add a song to start.' : 'The TV is off. Songs can be added once the launcher is open.'));
-      }
-      home.append(box);
-
-      if (now && now.artist) {
-        const chips = el('div', 'chips');
-        const more = el('button', 'chip', 'More from ' + now.artist);
-        more.onclick = () => { $('query').value = 'artist:"' + now.artist + '"'; onQuery(true); };
-        chips.append(more);
-        home.append(chips);
-      }
-
-      const next = (state && state.next) || [];
-      if (next.length) {
-        home.append(el('h2', 'label', 'Up next'));
-        const ul = el('ul');
-        next.forEach(t => ul.append(trackRow(t, false)));
-        home.append(ul);
-      }
+    function request(row) {
+      return insert(row).then(answer);
     }
 
     function tvOn() {
@@ -254,79 +235,335 @@
       return !!(state && state.at && Date.now() - state.at < 150000);
     }
 
-    function loadState() {
-      return fetch(REST + 'jam?select=results&kind=eq.state&code=eq.' + ROOM, { headers: { apikey: KEY } })
-        .then(r => r.json())
-        .then(rows => {
-          const next = rows[0] && rows[0].results;
-          const changed = JSON.stringify(next) !== JSON.stringify(state);
-          state = next || null;
-          const on = tvOn();
-          $('tv').className = on ? 'tv on' : 'tv';
-          $('tv').lastChild.textContent = on ? 'TV on' : 'TV off';
-          if (changed) renderHome();
+    // ---- Search --------------------------------------------------------------
+
+    function searchToken() {
+      const s = state && state.search;
+      return s && s.expires > Date.now() + 5000 ? s.token : null;
+    }
+
+    // Straight to Spotify when the TV has shared a token, otherwise through the TV.
+    function search(q) {
+      const token = searchToken();
+      if (!token) return request({ kind: 'search', query: q });
+      return fetch('https://api.spotify.com/v1/search?type=track&limit=10&q=' + encodeURIComponent(q), { headers: { Authorization: 'Bearer ' + token } })
+        .then(r => {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
         })
-        .catch(() => {});
+        .then(d => d.tracks.items.map(t => ({
+          uri: t.uri,
+          name: t.name,
+          artist: t.artists[0].name,
+          image: (t.album.images[t.album.images.length - 1] || {}).url,
+        })))
+        .catch(() => request({ kind: 'search', query: q }));
+    }
+
+    function addButton(t) {
+      const btn = el('button', 'icon-btn');
+      btn.innerHTML = ICON.add;
+      btn.setAttribute('aria-label', 'Add to queue');
+      btn.onclick = () => {
+        btn.disabled = true;
+        request({ kind: 'add', query: t.uri, name: $('name').value.trim().slice(0, 24) || null, title: (t.name + ' - ' + t.artist).slice(0, 200) })
+          .then(() => {
+            btn.disabled = false;
+            btn.innerHTML = ICON.added;
+            btn.classList.add('added');
+            btn.onclick = null;
+            toast('Added to queue');
+            setTimeout(loadState, 1200);
+          }, err => {
+            btn.disabled = false;
+            toast(err.message);
+          });
+      };
+      return btn;
+    }
+
+    function resultRow(t) {
+      const li = el('li', 'row');
+      const fg = el('div', 'fg');
+      const meta = el('div', 'meta');
+      meta.append(el('div', 'name', t.name), el('div', 'sub', 'Song • ' + t.artist));
+      fg.append(art(t.image), meta, addButton(t));
+      li.append(fg);
+      return li;
     }
 
     function skeleton() {
       const ul = el('ul', 'skeleton');
-      for (let i = 0; i < 5; i++) {
-        const li = el('li');
-        const meta = el('div', 'meta');
+      for (let i = 0; i < 6; i++) {
+        const li = el('li', 'row'), fg = el('div', 'fg'), meta = el('div', 'meta');
         const a = el('div', 'bar'), b = el('div', 'bar');
-        a.style.width = (50 + Math.random() * 30) + '%';
-        b.style.width = (25 + Math.random() * 20) + '%';
+        a.style.width = (45 + i * 37 % 35) + '%';
+        b.style.width = (20 + i * 13 % 20) + '%';
         meta.append(a, b);
-        li.append(el('div', 'art'), meta);
+        fg.append(el('div', 'art'), meta);
+        li.append(fg);
         ul.append(li);
       }
       return ul;
     }
 
-    // Live search: results follow what's typed; only the latest search is shown.
-    function onQuery(now) {
+    // Results follow what's typed; only the latest search is shown.
+    function onQuery(immediate) {
       const q = $('query').value.trim();
       $('clear').style.display = q ? 'block' : 'none';
       $('home').hidden = !!q;
       $('results').hidden = !q;
+      renderMini();
       clearTimeout(debounce);
       if (!q) return;
       const seq = ++searchSeq;
-      if (!$('results').querySelector('ul:not(.skeleton)')) {
-        $('results').textContent = '';
-        $('results').append(skeleton());
-      }
+      if (!$('results').firstChild) $('results').append(skeleton());
       debounce = setTimeout(() => {
-        insert({ kind: 'search', query: q })
-          .then(answer)
-          .then(tracks => {
-            if (seq !== searchSeq) return;
-            const box = $('results');
-            box.textContent = '';
-            if (!tracks.length) return box.append(el('div', 'note', 'No songs found.'));
-            const ul = el('ul');
-            tracks.forEach(t => ul.append(trackRow(t, true)));
-            box.append(ul);
-          }, err => {
-            if (seq !== searchSeq) return;
-            $('results').textContent = '';
-            $('results').append(el('div', 'note error', err.message));
+        search(q).then(tracks => {
+          if (seq !== searchSeq) return;
+          const box = $('results');
+          box.textContent = '';
+          if (!tracks.length) return box.append(el('div', 'note', 'No songs found for "' + q + '"'));
+          const ul = el('ul');
+          tracks.forEach(t => ul.append(resultRow(t)));
+          box.append(ul);
+        }, err => {
+          if (seq !== searchSeq) return;
+          $('results').textContent = '';
+          $('results').append(el('div', 'note', err.message));
+        });
+      }, immediate === true ? 0 : searchToken() ? 120 : 350);
+    }
+
+    // ---- Queue ---------------------------------------------------------------
+
+    function edit(op) {
+      pendingEdits++;
+      request({ kind: 'edit', query: JSON.stringify(op) })
+        .catch(err => toast(err.message))
+        .then(() => {
+          pendingEdits--;
+          lastJson = '';
+          loadState();
+        });
+    }
+
+    function pickRow(p) {
+      const li = el('li', 'row pick');
+      const fg = el('div', 'fg');
+      const meta = el('div', 'meta');
+      const sub = el('div', 'sub');
+      if (p.handed) sub.append(el('span', 'next', 'Playing next'), ' • ');
+      sub.append(p.artist);
+      if (p.by) sub.append(' • ', el('span', 'by', p.by));
+      meta.append(el('div', 'name', p.name), sub);
+      fg.append(art(p.image), meta);
+      if (!p.handed) {
+        const handle = el('div', 'handle');
+        handle.innerHTML = ICON.handle;
+        fg.append(handle);
+        li.append(el('div', 'del', 'Remove'));
+        swipeToRemove(li, fg, p);
+        dragToReorder(li, handle, p);
+      }
+      li.append(fg);
+      return li;
+    }
+
+    // Swipe a pick left past a third of the row to remove it.
+    function swipeToRemove(li, fg, p) {
+      let x0, y0, dx, mode = null;
+      fg.addEventListener('pointerdown', e => {
+        if (e.target.closest('.handle')) return;
+        x0 = e.clientX; y0 = e.clientY; dx = 0; mode = 'maybe';
+      });
+      fg.addEventListener('pointermove', e => {
+        if (!mode) return;
+        dx = Math.min(0, e.clientX - x0);
+        if (mode === 'maybe') {
+          if (Math.abs(e.clientY - y0) > 10) { mode = null; return; }
+          if (Math.abs(e.clientX - x0) < 10) return;
+          mode = 'swipe';
+          gesture = true;
+          fg.setPointerCapture(e.pointerId);
+        }
+        fg.style.transform = 'translateX(' + dx + 'px)';
+      });
+      const end = () => {
+        if (mode !== 'swipe') { mode = null; return; }
+        mode = null;
+        gesture = false;
+        li.classList.add('settle');
+        if (dx < -li.offsetWidth / 3) {
+          fg.style.transform = 'translateX(-100%)';
+          li.style.height = li.offsetHeight + 'px';
+          requestAnimationFrame(() => li.classList.add('gone'));
+          setTimeout(() => li.remove(), 220);
+          state.picks = state.picks.filter(q => q.id !== p.id);
+          edit({ op: 'remove', id: p.id });
+        } else {
+          fg.style.transform = '';
+          setTimeout(() => li.classList.remove('settle'), 220);
+        }
+      };
+      fg.addEventListener('pointerup', end);
+      fg.addEventListener('pointercancel', end);
+    }
+
+    // Drag a pick by its handle to move it, like Spotify's queue.
+    function dragToReorder(li, handle, p) {
+      handle.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        const ul = li.parentNode, rows = Array.from(ul.children);
+        const from = rows.indexOf(li), h = li.offsetHeight, y0 = e.clientY;
+        const first = state.picks[0] && state.picks[0].handed ? 1 : 0;
+        let to = from;
+        gesture = true;
+        li.classList.add('dragging');
+        handle.setPointerCapture(e.pointerId);
+        const move = ev => {
+          const dy = ev.clientY - y0;
+          to = Math.max(first, Math.min(rows.length - 1, from + Math.round(dy / h)));
+          li.style.transform = 'translateY(' + dy + 'px)';
+          rows.forEach((r, k) => {
+            if (r === li) return;
+            const shift = from < k && k <= to ? -h : to <= k && k < from ? h : 0;
+            r.classList.add('settle');
+            r.style.transform = shift ? 'translateY(' + shift + 'px)' : '';
           });
-      }, now === true ? 0 : 350);
+        };
+        const up = () => {
+          handle.removeEventListener('pointermove', move);
+          handle.removeEventListener('pointerup', up);
+          handle.removeEventListener('pointercancel', up);
+          rows.forEach(r => { r.classList.remove('settle'); r.style.transform = ''; });
+          li.style.transform = '';
+          li.classList.remove('dragging');
+          gesture = false;
+          if (to === from) return;
+          ul.insertBefore(li, to > from ? rows[to].nextSibling : rows[to]);
+          state.picks.splice(to, 0, state.picks.splice(from, 1)[0]);
+          edit({ op: 'move', id: p.id, to });
+        };
+        handle.addEventListener('pointermove', move);
+        handle.addEventListener('pointerup', up);
+        handle.addEventListener('pointercancel', up);
+      });
+    }
+
+    function simpleRow(t) {
+      const li = el('li', 'row');
+      const fg = el('div', 'fg');
+      const meta = el('div', 'meta');
+      meta.append(el('div', 'name', t.name), el('div', 'sub', t.artist));
+      fg.append(art(t.image), meta);
+      li.append(fg);
+      return li;
+    }
+
+    // ---- Home ----------------------------------------------------------------
+
+    function renderNow() {
+      const box = $('now');
+      box.textContent = '';
+      const now = state && state.now;
+      if (!now) {
+        const idle = el('div', 'idle');
+        idle.append(el('b', null, tvOn() ? 'Nothing playing' : 'The TV is off'));
+        idle.append(tvOn() ? 'Add a song to get things going.' : 'Songs can be added once the launcher is open.');
+        box.append(idle);
+        return;
+      }
+      tint(now.image);
+      const hero = el('div', 'hero');
+      const on = el('div', 'playing-on');
+      on.innerHTML = ICON.speaker;
+      on.append('Playing on TV');
+      hero.append(art(now.image, 'art-big'), el('div', 'title', now.name), el('div', 'artist', now.artist), on);
+      box.append(hero);
+    }
+
+    function renderChips() {
+      const box = $('chips');
+      box.textContent = '';
+      const now = state && state.now;
+      if (!now || !now.artist) return;
+      const chip = el('button', 'chip', 'More from ' + now.artist);
+      chip.onclick = () => {
+        $('query').value = now.artist;
+        onQuery(true);
+      };
+      box.append(chip);
+    }
+
+    function renderQueue() {
+      const box = $('queue');
+      box.textContent = '';
+      const picks = (state && state.picks) || [], next = (state && state.next) || [];
+      if (picks.length) {
+        const h = el('h2', null, 'Next in queue');
+        h.append(el('small', null, 'Drag to reorder, swipe left to remove'));
+        const ul = el('ul');
+        picks.forEach(p => ul.append(pickRow(p)));
+        box.append(h, ul);
+      }
+      if (next.length) {
+        const ul = el('ul');
+        next.forEach(t => ul.append(simpleRow(t)));
+        box.append(el('h2', null, 'Next from Spotify'), ul);
+      }
+    }
+
+    function renderMini() {
+      const mini = $('mini'), now = state && state.now;
+      mini.hidden = !now || $('results').hidden;
+      if (mini.hidden) return;
+      mini.textContent = '';
+      const meta = el('div', 'meta');
+      const sub = el('div', 'sub');
+      sub.innerHTML = ICON.speaker;
+      sub.append('TV');
+      meta.append(el('div', 'name', now.name + ' • ' + now.artist), sub);
+      mini.append(art(now.image), meta);
+    }
+
+    function renderDevice() {
+      const on = tvOn();
+      $('device').className = on ? 'device on' : 'device';
+      $('device').innerHTML = ICON.speaker;
+      $('device').append(on ? 'TV' : 'TV off');
+    }
+
+    function loadState() {
+      return fetch(REST + 'jam?select=results&kind=eq.state&code=eq.' + ROOM, { headers: { apikey: KEY } })
+        .then(r => r.json())
+        .then(rows => {
+          const json = JSON.stringify(rows[0] && rows[0].results);
+          // Don't redraw under a finger, or before the TV has applied an edit.
+          if (json === lastJson || gesture || pendingEdits) return renderDevice();
+          lastJson = json;
+          state = (rows[0] && rows[0].results) || null;
+          renderDevice();
+          renderNow();
+          renderChips();
+          renderQueue();
+          renderMini();
+        })
+        .catch(() => {});
     }
 
     $('query').addEventListener('input', onQuery);
     $('query').addEventListener('keydown', e => { if (e.key === 'Enter') { $('query').blur(); onQuery(true); } });
-    $('clear').onclick = () => { $('query').value = ''; onQuery(); $('query').focus(); };
+    $('clear').onclick = () => { $('query').value = ''; $('results').textContent = ''; onQuery(); $('query').focus(); };
     try { $('name').value = localStorage.getItem('jam-name') || ''; } catch (e) {}
     $('name').addEventListener('input', () => {
       try { localStorage.setItem('jam-name', $('name').value.trim()); } catch (e) {}
     });
 
-    renderHome();
+    renderDevice();
+    renderNow();
     loadState();
-    setInterval(loadState, 3000);
+    setInterval(loadState, 2500);
   </script>
 </body>
 </html>
