@@ -9,7 +9,7 @@ const Music = (() => {
   // Remote media keys, registered with the TV so they reach the launcher.
   const MEDIA = { 10252: 'toggle', 415: 'toggle', 19: 'toggle', 10233: 'next', 10232: 'prev' };
   let token = null, expires = 0;
-  let track = null, playing = false, status = '', heldByHide = false;
+  let track = null, playing = false, status = '', heldByHide = false, shuffle = false, repeat = 'off';
   let progress = 0, duration = 0, polledAt = 0;
   let btn = 1, logo = null;
 
@@ -114,8 +114,17 @@ const Music = (() => {
     if (document.hidden) return;
     api('GET', '/me/player').then(p => {
       const t = p && p.item;
-      track = t && { name: t.name, artist: t.artists[0].name };
+      track = t && {
+        id: t.id,
+        name: t.name,
+        artist: t.artists[0].name,
+        artists: t.artists.map(a => a.name).join(', '),
+        album: t.album.name,
+        image: (t.album.images[0] || {}).url,
+      };
       playing = !!(p && p.is_playing);
+      shuffle = !!(p && p.shuffle_state);
+      repeat = (p && p.repeat_state) || 'off';
       progress = (p && p.progress_ms) || 0;
       duration = (t && t.duration_ms) || 0;
       polledAt = Date.now();
@@ -197,7 +206,28 @@ const Music = (() => {
     toggle: () => control('PUT', playing ? '/me/player/pause' : '/me/player/play', () => { playing = !playing; }),
     next: () => control('POST', '/me/player/next'),
     speaker: switchSpeaker,
+    shuffle: () => control('PUT', '/me/player/shuffle?state=' + !shuffle, () => { shuffle = !shuffle; }),
+    repeat: () => {
+      const to = REPEAT[(REPEAT.indexOf(repeat) + 1) % REPEAT.length];
+      control('PUT', '/me/player/repeat?state=' + to, () => { repeat = to; });
+    },
   };
+  const REPEAT = ['off', 'context', 'track'];
+
+  // What's playing, for the Spotify screen (js/spotify.js), with the position counted
+  // forward from the last poll.
+  function now() {
+    return {
+      track,
+      playing,
+      shuffle,
+      repeat,
+      status,
+      speaker: speaker(),
+      duration,
+      progress: Math.min(duration, progress + (playing ? Date.now() - polledAt : 0)),
+    };
+  }
 
   function onKey(e) {
     if (MEDIA[e.keyCode]) actions[MEDIA[e.keyCode]]();
@@ -304,7 +334,7 @@ const Music = (() => {
     g.arc(cx, cy, r, 0, Math.PI * 2);
     g.stroke();
     if (duration) {
-      const at = Math.min(duration, progress + (playing ? Date.now() - polledAt : 0));
+      const at = now().progress;
       g.lineCap = 'round';
       g.strokeStyle = '#1DB954';
       g.shadowColor = '#1DB954';
@@ -339,5 +369,5 @@ const Music = (() => {
     if (text) drawText(g, text, x, cy - 3.5 * cell, cell, playing ? '#d3d7dd' : '#7d838c', { style: 'thin' });
   }
 
-  return { start, draw, key, enabled, api, catalogToken, hold };
+  return { start, draw, key, enabled, api, catalogToken, hold, now, poll, act: name => actions[name]() };
 })();

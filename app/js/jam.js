@@ -158,6 +158,7 @@ const Jam = (() => {
   // straight away. Apple's feed now and then answers 504, so a miss is retried soon.
   const CHART = 'https://rss.marketingtools.apple.com/api/v2/us/music/most-played/30/songs.json';
   let chart = [], chartAt = 0;
+  let upcoming = []; // guests' picks, then Spotify's queue, for the Spotify screen
   function refreshChart() {
     if (Date.now() - chartAt < (chart.length ? 6 * 3600e3 : 60e3)) return;
     chartAt = Date.now();
@@ -264,6 +265,7 @@ const Jam = (() => {
         const next = q ? q.queue.map(t => trackInfo(t)) : [];
         const handed = picks[0] && picks[0].handed ? next.findIndex(t => t.uri === picks[0].uri) : -1;
         if (handed >= 0) next.splice(handed, 1);
+        upcoming = picks.concat(next).slice(0, 3);
         return publish({
           now: now && trackInfo(now, true),
           playback: now && { playing: p.is_playing, progress: p.progress_ms, duration: now.duration_ms, repeat: p.repeat_state, shuffle: p.shuffle_state },
@@ -312,5 +314,5 @@ const Jam = (() => {
     drawText(g, text.length > 40 ? text.slice(0, 38).trim() + '..' : text, 88, H - 140, 4, '#ffffff', { style: 'thin' });
   }
 
-  return { start, draw, renderQr };
+  return { start, draw, renderQr, upNext: () => upcoming };
 })();
