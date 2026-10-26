@@ -1,12 +1,18 @@
 #!/usr/bin/env bash
 # Package the launcher (app/) as a signed .wgt, install it on a Samsung TV in Developer
-# Mode, then open it. See README.md for the one-time setup.
-# Usage: ./deploy.sh <tv-ip>
+# Mode, then open it. See docs/guide.md for the one-time setup.
+# Usage: ./deploy.sh <tv-ip> [design]
+#        design: the look it starts on: bonito (default), horizon, dial, panorama or mediabar
 # Env:   CERT_PROFILE  certificate profile name from Tizen Certificate Manager (default: tv)
 #        TIZEN_HOME    Tizen Studio install dir (default: ~/tizen-studio)
 set -euo pipefail
 
-TV_IP="${1:?usage: ./deploy.sh <tv-ip>}"
+TV_IP="${1:?usage: ./deploy.sh <tv-ip> [design]}"
+DESIGN="${2:-}"
+case "$DESIGN" in
+  ''|bonito|horizon|dial|panorama|mediabar) ;;
+  *) echo "Unknown design '$DESIGN': use bonito, horizon, dial, panorama or mediabar." >&2; exit 1 ;;
+esac
 TIZEN_HOME="${TIZEN_HOME:-$HOME/tizen-studio}"
 TIZEN="$TIZEN_HOME/tools/ide/bin/tizen"
 SDB="$TIZEN_HOME/tools/sdb"
@@ -26,6 +32,8 @@ fi
 rm -rf build dist
 mkdir -p build dist/launcher
 cp -R app build/launcher
+# The picked look goes after anything in config.local.js, so it wins.
+if [ -n "$DESIGN" ]; then echo "CONFIG.design = '$DESIGN';" >> build/launcher/config.local.js; fi
 # -o is resolved against the tizen CLI's own folder unless absolute.
 "$TIZEN" package -t wgt -s "$PROFILE" -o "$PWD/dist/launcher" -- build/launcher
 # The TV's installer fails silently on file names with spaces (the .wgt is named after <name>).

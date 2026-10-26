@@ -3,8 +3,10 @@ const canvas = document.getElementById('screen');
 const ctx = canvas.getContext('2d');
 let clock = 0; // seconds since boot, drives idle animations
 
+// ?design= is the look picked on the website before installing (the per-design APKs, the
+// browser link): where the TV starts until a design is picked on it.
 const settings = Object.assign(
-  { speed: 'normal', lightbar: true, clock: '12h', design: CONFIG.design || 'bonito', apps: {} },
+  { speed: 'normal', lightbar: true, clock: '12h', design: Platform.param('design') || CONFIG.design || 'bonito', apps: {} },
   // New key so TVs that saved the old app list pick up the new defaults.
   Platform.load('launcher', {})
 );
@@ -19,7 +21,7 @@ function saveSettings() {
 // Name, city, design and Spotify login sent from a phone (setup/index.html), over
 // whatever config.js and config.local.js say.
 Object.assign(CONFIG, Platform.load('profile', {}));
-setDesign(Platform.param('design') || settings.design);
+setDesign(settings.design);
 
 // This TV's room on Supabase. Phones join it by scanning the TV's QR code, so they
 // reach this TV and no other. Random per TV unless CONFIG.room pins one (4-8 letters).

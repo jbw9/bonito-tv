@@ -264,32 +264,31 @@ App.screens.home = (() => {
     return { axis: 'v', draw };
   })();
 
-  // ---- Horizon: a landscape, a big clock behind the mountain, and a dock ----
-  // After a smart TV home by @joshuaseage (instagram.com/joshuaseage); the scene is
-  // drawn here, by time of day.
+  // ---- Horizon: a mountain photo, a big clock behind the peak, and a dock ----
+  // After a smart TV home by @joshuaseage (instagram.com/joshuaseage). The photo is
+  // images.unsplash.com/photo-1483728642387-6c3bdd6c93e5 (Unsplash License); its mask
+  // is the mountains alone, cut along the ridge so they can stand in front of the clock.
 
   const horizon = (() => {
+    // Light over the photo by time of day (a blend mode and colour), and the clock's ink.
     const SCENES = {
-      night: {
-        sky: ['#060a1d', '#182050', '#3a3c78'], far: '#2a2f62', mid: '#1b1f46', front: ['#2a2c5c', '#0c0e23'],
-        snow: 'rgba(205,215,255,0.55)', clock: ['rgba(240,243,255,0.9)', 'rgba(160,170,235,0.5)'], stars: true,
-      },
-      dawn: {
-        sky: ['#2c2b6e', '#c66c9c', '#ffc59c'], far: '#9d6b9f', mid: '#6d4b85', front: ['#5b3f79', '#22163b'],
-        snow: 'rgba(255,228,236,0.8)', clock: ['rgba(255,247,250,0.95)', 'rgba(255,198,214,0.55)'], sun: '#ffe1b4',
-      },
-      day: {
-        sky: ['#2c6bcd', '#78afec', '#d4eaff'], far: '#93b3d8', mid: '#6087b3', front: ['#4f719b', '#1d3351'],
-        snow: 'rgba(255,255,255,0.92)', clock: ['rgba(255,255,255,0.95)', 'rgba(222,236,255,0.65)'], sun: '#fffbe6',
-      },
-      dusk: {
-        sky: ['#1d2262', '#b0487d', '#ff9c63'], far: '#8b4b7d', mid: '#5d3064', front: ['#4b2959', '#1b0e2b'],
-        snow: 'rgba(255,212,200,0.75)', clock: ['rgba(255,242,236,0.95)', 'rgba(255,178,168,0.55)'], sun: '#ffb26f',
-      },
+      night: { tint: ['multiply', 'rgb(88,98,160)'], clock: ['rgba(240,243,255,0.9)', 'rgba(160,170,235,0.5)'] },
+      dawn: { tint: ['soft-light', 'rgba(255,150,175,0.6)'], clock: ['rgba(255,247,250,0.95)', 'rgba(255,198,214,0.55)'] },
+      day: { tint: null, clock: ['rgba(255,255,255,0.95)', 'rgba(222,236,255,0.65)'] },
+      dusk: { tint: ['soft-light', 'rgba(255,125,60,0.6)'], clock: ['rgba(255,242,236,0.95)', 'rgba(255,178,168,0.55)'] },
     };
     const TILE = 112, GAP = 26, DOCK_Y = 812, CARD_W = 300, CARD_H = 140, CARD_Y = 618;
-    const PEAK_X = W * 0.53, PEAK_Y = 410;
-    let scene = null, sceneKey = '', rsel = 0, dockOff = null;
+    let scene = null, sceneKey = '', rsel = 0, dockOff = null, loaded = 0;
+
+    const photo = new Image(), mask = new Image();
+    [photo, mask].forEach(img => {
+      img.onload = () => {
+        loaded++;
+        sceneKey = '';
+      };
+    });
+    photo.src = 'img/horizon/mountains.jpg';
+    mask.src = 'img/horizon/mountains-mask.png';
 
     function period(h) {
       if (h >= 20 || h < 5) return 'night';
@@ -298,93 +297,39 @@ App.screens.home = (() => {
       return 'dusk';
     }
 
-    // A mountain ridge as a path closed along the bottom: rolling sines, plus a peak.
-    function ridge(base, amp, seed, peak) {
-      const p = new Path2D();
-      p.moveTo(0, H);
-      for (let x = 0; x <= W; x += 6) {
-        let y = base + amp * (0.6 * Math.sin(x * 0.0021 + seed) + 0.3 * Math.sin(x * 0.0061 + seed * 2.3) + 0.12 * Math.sin(x * 0.019 + seed * 4.1));
-        if (peak) {
-          const t = Math.max(0, 1 - Math.abs(x - peak.x) / peak.w);
-          y -= peak.h * Math.pow(t, 1.25) * (1 + 0.05 * Math.sin(x * 0.05 + seed));
-        }
-        p.lineTo(x, y);
-      }
-      p.lineTo(W, H);
-      p.closePath();
-      return p;
-    }
-
-    // Three layers: the sky and far hills (behind the clock), the big peak and the
-    // foreground (in front of it), and a blurred copy of both for the glass.
+    // Three layers: the tinted photo (behind the clock), its mountains alone (in front
+    // of it), and a blurred copy for the glass. Plain teal until the photo has loaded.
     function build(name) {
-      const s = SCENES[name];
+      const s = SCENES[name], ready = loaded === 2;
       const back = makeCanvas(W, H, b => {
-        const sky = b.createLinearGradient(0, 0, 0, H * 0.8);
-        sky.addColorStop(0, s.sky[0]);
-        sky.addColorStop(0.55, s.sky[1]);
-        sky.addColorStop(1, s.sky[2]);
-        b.fillStyle = sky;
-        b.fillRect(0, 0, W, H);
-        if (s.stars) {
-          let seed = 7;
-          const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-          b.fillStyle = '#ffffff';
-          for (let i = 0; i < 260; i++) {
-            b.globalAlpha = 0.25 + rnd() * 0.7;
-            b.fillRect(rnd() * W, rnd() * H * 0.6, 1.2 + rnd() * 1.6, 1.2 + rnd() * 1.6);
-          }
-          b.globalAlpha = 1;
-        }
-        if (s.sun) {
-          const sun = b.createRadialGradient(W * 0.22, H * 0.56, 10, W * 0.22, H * 0.56, 520);
-          sun.addColorStop(0, s.sun);
-          sun.addColorStop(1, 'rgba(255,255,255,0)');
-          b.fillStyle = sun;
+        if (!ready) {
+          b.fillStyle = '#29464b';
           b.fillRect(0, 0, W, H);
+          return;
         }
-        b.fillStyle = s.far;
-        b.fill(ridge(640, 70, 1.3, { x: W * 0.18, w: 520, h: 120 }));
-        b.fillStyle = s.mid;
-        b.fill(ridge(700, 60, 4.2, { x: W * 0.86, w: 600, h: 160 }));
-      });
-      const front = makeCanvas(W, H, b => {
-        const peak = ridge(800, 30, 2.7, { x: PEAK_X, w: 680, h: 800 - PEAK_Y });
-        const rock = b.createLinearGradient(0, PEAK_Y, 0, H);
-        rock.addColorStop(0, s.front[0]);
-        rock.addColorStop(1, s.front[1]);
-        b.fillStyle = rock;
-        b.fill(peak);
-        // Snow on the upper slopes, fading out downhill.
-        b.save();
-        b.clip(peak);
-        const snow = b.createLinearGradient(0, PEAK_Y, 0, PEAK_Y + 200);
-        snow.addColorStop(0, s.snow);
-        snow.addColorStop(1, 'rgba(255,255,255,0)');
-        b.fillStyle = snow;
-        b.fillRect(0, PEAK_Y - 10, W, 210);
-        b.restore();
-        // A dark tree line, then shade so the dock reads.
-        b.fillStyle = s.front[1];
-        b.fill(ridge(900, 18, 5.5));
-        b.beginPath();
-        for (let x = -20; x < W + 20; x += 22) {
-          const top = 862 + 22 * Math.sin(x * 0.013) + 14 * Math.sin(x * 0.11);
-          b.moveTo(x, 940);
-          b.lineTo(x + 11, top);
-          b.lineTo(x + 22, 940);
+        b.drawImage(photo, 0, 0, W, H);
+        if (s.tint) {
+          b.globalCompositeOperation = s.tint[0];
+          b.fillStyle = s.tint[1];
+          b.fillRect(0, 0, W, H);
+          b.globalCompositeOperation = 'source-over';
         }
-        b.fill();
+        // Shade along the bottom so the dock reads.
         const shade = b.createLinearGradient(0, 560, 0, H);
         shade.addColorStop(0, 'rgba(0,0,0,0)');
         shade.addColorStop(1, 'rgba(0,0,0,0.45)');
         b.fillStyle = shade;
         b.fillRect(0, 560, W, H - 560);
       });
+      const front = makeCanvas(W, H, b => {
+        if (!ready) return;
+        b.drawImage(back, 0, 0);
+        b.globalCompositeOperation = 'destination-in';
+        b.drawImage(mask, 0, 0, W, H);
+      });
       const blur = makeCanvas(W / 24, H / 24, b => {
         b.imageSmoothingQuality = 'high';
         b.drawImage(back, 0, 0, W / 24, H / 24);
-        b.drawImage(front, 0, 0, W / 24, H / 24);
       });
       return { s, back, front, blur };
     }
@@ -828,15 +773,10 @@ App.screens.home = (() => {
       g.translate((1 - ease) * 140, 0);
       g.globalAlpha = ease;
       c.items.slice(top, top + SHOWN).forEach((row, j) => {
-        const on = top + j === i && focus === 'list', y = LIST_Y + j * ROW_H + (top + j > i ? 34 : 0);
+        const on = top + j === i && focus === 'list', y = LIST_Y + j * ROW_H;
         g.fillStyle = on ? '#ffffff' : 'rgba(255,255,255,0.42)';
         g.font = font(on ? 400 : 300, 64);
         g.fillText(row.connect ? 'connect phone' : row.settings ? 'settings' : title(row.app.name).toLowerCase(), LIST_X, y);
-        if (top + j === i) {
-          g.fillStyle = row.app.color === '#F4F6F8' ? '#9aa6ff' : row.app.color;
-          g.font = font(500, 26);
-          g.fillText(row.connect ? 'remote, spotify and games on your phone' : row.settings ? 'apps, design, clock' : kind(row.app).toLowerCase(), LIST_X + 2, y + 42);
-        }
       });
       g.restore();
 

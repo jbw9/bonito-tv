@@ -50,6 +50,10 @@
     nav.links a { text-decoration: none; color: var(--mist); }
     nav.links a:hover { color: var(--paper); }
     @media (max-width: 720px) { nav.links a:not(.gh) { display: none; } }
+    nav.links .gh { display: flex; align-items: center; gap: 6px; }
+    .gh svg { width: 20px; height: 20px; fill: currentColor; }
+    .gh span::before { content: '\2605\00a0'; }
+    .gh span:empty { display: none; }
 
     /* ---- hero ------------------------------------------------------------------ */
     .hero { padding-top: 28px; }
@@ -291,8 +295,17 @@
     .also h3 { margin: 0 0 8px; font: 900 22px/1 var(--dot); }
     .also p { margin: 0; font-size: 14px; color: var(--mist); }
 
-    /* Install: pick your TV, then Claude Code or by hand. */
-    .picker { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 36px; }
+    /* Install: pick a look and your TV, then Claude Code or by hand. */
+    .step { margin: 36px 0 0; font-size: 15px; font-weight: 600; color: var(--mist); }
+    .step b { font: 900 18px var(--dot); color: var(--standby); margin-right: 8px; }
+    .looks { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+    .looks button {
+      display: flex; align-items: center; gap: 10px; padding: 6px 14px 6px 6px; border-radius: 12px;
+      border: 1px solid var(--line); background: var(--night-2); font-weight: 600; font-size: 15px; color: var(--mist);
+    }
+    .looks img { width: 64px; height: 36px; border-radius: 6px; display: block; }
+    .looks button[aria-pressed="true"] { color: var(--paper); border-color: var(--standby); background: var(--night-3); }
+    .picker { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
     .picker button {
       padding: 12px 18px; border-radius: 12px; border: 1px solid var(--line); background: var(--night-2); font-weight: 600; font-size: 15px; color: var(--mist);
     }
@@ -377,7 +390,7 @@
       <a href="#games">Games</a>
       <a href="#install">Install</a>
       <a href="#ideas">Ideas</a>
-      <a class="gh" href="https://github.com/jbw9/bonito-tv">GitHub</a>
+      <a class="gh" href="https://github.com/jbw9/bonito-tv" target="_blank" rel="noopener" aria-label="GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg><span id="stars"></span></a>
     </nav>
   </header>
 
@@ -475,7 +488,10 @@
 
     <section class="block wrap" id="install">
       <h2>Put it on your TV</h2>
-      <p class="intro">Which TV do you have? If you use Claude Code, it can do the whole install for you. Otherwise the steps are below.</p>
+      <p class="intro">If you use Claude Code, it can do the whole install for you. Otherwise the steps are below.</p>
+      <p class="step"><b>1</b>Pick a look. It's where your TV starts, and you can change it any time in Settings.</p>
+      <div class="looks" id="looks" aria-label="Design"></div>
+      <p class="step"><b>2</b>Which TV do you have?</p>
       <div class="picker" role="tablist" aria-label="Your TV">
         <button role="tab" data-tv="samsung" aria-selected="true">Samsung</button>
         <button role="tab" data-tv="google" aria-selected="false">Google TV or Android TV</button>
@@ -490,7 +506,7 @@
           <div class="lane">
             <h3>With Claude Code</h3>
             <p>Paste this into Claude Code on a Mac or PC that's on the same Wi-Fi as the TV. It sets up the tools, finds your TV and installs, and tells you which buttons to press on the TV remote.</p>
-            <pre class="prompt">Install Bonito on my Samsung TV. Clone https://github.com/jbw9/bonito-tv and follow SETUP.md in it from start to finish. Do every step you can yourself, and tell me exactly what to press on the TV when you need me.<button class="copy">Copy</button></pre>
+            <pre class="prompt">Install Bonito on my Samsung TV with the <span class="look-name">Bonito</span> design. Clone https://github.com/jbw9/bonito-tv and follow SETUP.md in it from start to finish. Do every step you can yourself, and tell me exactly what to press on the TV when you need me.<button class="copy">Copy</button></pre>
             <p class="small">No Claude Code yet? Install it from <a href="https://claude.com/claude-code">claude.com/claude-code</a>, open Terminal, type <code>claude</code> and paste.</p>
           </div>
           <div class="lane">
@@ -498,9 +514,9 @@
             <ol class="steps">
               <li><b>Turn on Developer Mode.</b> On the TV, open Apps and press 1 2 3 4 5 on the remote. Switch Developer Mode on, type your computer's IP address, and restart the TV.</li>
               <li><b>Install Tizen Studio</b> on your computer and create a Samsung certificate in its Certificate Manager. You'll need a free Samsung account.</li>
-              <li><b>Download this project</b> and run <code>./deploy.sh &lt;your TV's IP&gt;</code>. It installs and opens Bonito.</li>
+              <li><b>Download this project</b> and run <code>./deploy.sh &lt;your TV's IP&gt; <span class="look-key">bonito</span></code>. It installs and opens Bonito.</li>
             </ol>
-            <p class="small">The <a href="https://github.com/jbw9/bonito-tv#readme">full walkthrough</a> has every click and fixes for the usual snags. Just want to try it first? Open your TV's Internet app and go to <code>jbw9.github.io/bonito-tv/tv</code>.</p>
+            <p class="small">The <a href="https://github.com/jbw9/bonito-tv/blob/main/docs/guide.md">full walkthrough</a> has every click and fixes for the usual snags. Just want to try it first? Open your TV's Internet app and go to <code>jbw9.github.io/bonito-tv/tv<span class="look-q"></span></code>.</p>
           </div>
         </div>
       </div>
@@ -511,7 +527,7 @@
           <div class="lane">
             <h3>With Claude Code</h3>
             <p>Claude installs the app over your Wi-Fi. You'll switch on a developer setting on the TV, and Claude tells you where it is.</p>
-            <pre class="prompt">Install Bonito on my Google TV / Android TV. Clone https://github.com/jbw9/bonito-tv and follow SETUP.md in it from start to finish. Do every step you can yourself, and tell me exactly what to press on the TV when you need me.<button class="copy">Copy</button></pre>
+            <pre class="prompt">Install Bonito on my Google TV / Android TV with the <span class="look-name">Bonito</span> design. Clone https://github.com/jbw9/bonito-tv and follow SETUP.md in it from start to finish. Do every step you can yourself, and tell me exactly what to press on the TV when you need me.<button class="copy">Copy</button></pre>
             <p class="small">No Claude Code yet? Install it from <a href="https://claude.com/claude-code">claude.com/claude-code</a>, open Terminal, type <code>claude</code> and paste.</p>
           </div>
           <div class="lane">
@@ -519,7 +535,7 @@
             <ol class="steps">
               <li><b>Unlock developer options.</b> Go to Settings › System › About and press <i>Android TV OS build</i> seven times.</li>
               <li><b>Get Downloader.</b> Install the free Downloader app from Google Play, then allow it under Settings › Apps › Security &amp; restrictions › Unknown sources.</li>
-              <li><b>Download Bonito.</b> In Downloader, type <code>jbw9.github.io/bonito-tv/bonito.apk</code> and press Install.</li>
+              <li><b>Download Bonito.</b> In Downloader, type <code>jbw9.github.io/bonito-tv/<span class="look-key">bonito</span>.apk</code> and press Install.</li>
               <li><b>Open it</b> from your apps. Long-press it to move it to the front of the row.</li>
             </ol>
           </div>
@@ -532,7 +548,7 @@
           <div class="lane">
             <h3>With Claude Code</h3>
             <p>Claude installs the app over your Wi-Fi once you switch on ADB debugging, and tells you where to find it.</p>
-            <pre class="prompt">Install Bonito on my Amazon Fire TV. Clone https://github.com/jbw9/bonito-tv and follow SETUP.md in it from start to finish. Do every step you can yourself, and tell me exactly what to press on the TV when you need me.<button class="copy">Copy</button></pre>
+            <pre class="prompt">Install Bonito on my Amazon Fire TV with the <span class="look-name">Bonito</span> design. Clone https://github.com/jbw9/bonito-tv and follow SETUP.md in it from start to finish. Do every step you can yourself, and tell me exactly what to press on the TV when you need me.<button class="copy">Copy</button></pre>
             <p class="small">No Claude Code yet? Install it from <a href="https://claude.com/claude-code">claude.com/claude-code</a>, open Terminal, type <code>claude</code> and paste.</p>
           </div>
           <div class="lane">
@@ -540,7 +556,7 @@
             <ol class="steps">
               <li><b>Unlock developer options.</b> Go to Settings › My Fire TV › About and press your device's name seven times.</li>
               <li><b>Get Downloader.</b> Install Downloader from the Appstore, then turn it on under Settings › My Fire TV › Developer options › Install unknown apps.</li>
-              <li><b>Download Bonito.</b> In Downloader, type <code>jbw9.github.io/bonito-tv/bonito.apk</code> and press Install.</li>
+              <li><b>Download Bonito.</b> In Downloader, type <code>jbw9.github.io/bonito-tv/<span class="look-key">bonito</span>.apk</code> and press Install.</li>
               <li><b>Open it</b> from Your Apps &amp; Channels.</li>
             </ol>
           </div>
@@ -554,14 +570,14 @@
             <h3>On the TV</h3>
             <ol class="steps">
               <li><b>Open the TV's web browser.</b> On LG it's called Web Browser, on Samsung Internet.</li>
-              <li><b>Go to</b> <code>jbw9.github.io/bonito-tv/tv</code> and bookmark it.</li>
+              <li><b>Go to</b> <code>jbw9.github.io/bonito-tv/tv<span class="look-q"></span></code> and bookmark it.</li>
               <li><b>Scan the code</b> under Connect Phone with your phone, and you have a remote with a keyboard.</li>
             </ol>
           </div>
           <div class="lane">
             <h3>On a computer plugged into the TV</h3>
             <ol class="steps">
-              <li><b>Plug in with HDMI</b> and open <code>jbw9.github.io/bonito-tv/tv</code> in Chrome.</li>
+              <li><b>Plug in with HDMI</b> and open <code>jbw9.github.io/bonito-tv/tv<span class="look-q"></span></code> in Chrome.</li>
               <li><b>Go full screen</b> with F11, or Control-Command-F on a Mac.</li>
               <li><b>Put the laptop away.</b> Your phone does the rest.</li>
             </ol>
@@ -707,6 +723,9 @@
       });
     }, 400);
 
+    fetch('https://api.github.com/repos/jbw9/bonito-tv').then(r => r.json())
+      .then(r => { if (r.stargazers_count != null) $('stars').textContent = r.stargazers_count; }).catch(() => {});
+
     // ---- designs --------------------------------------------------------------------
     // The layouts in app/js/home.js; img/designs/ has a screenshot of each.
     const DESIGNS = [
@@ -731,10 +750,9 @@
         b.querySelector('h3').textContent = d.name;
         b.querySelector('p').textContent = d.about;
         b.onclick = () => {
-          picked = d.key;
+          pickLook(d.key);
           powerOn();
           send({ design: d.key });
-          renderDesigns();
           room.scrollIntoView({ block: 'center' });
         };
         card.append(b);
@@ -753,7 +771,27 @@
         $('design-list').append(card);
       });
     }
-    renderDesigns();
+    // The look picked here or under Designs goes into the install steps: the prompt, the
+    // deploy command, the APK (one per design, android/build.sh) and the browser link.
+    function pickLook(key) {
+      picked = key;
+      const d = DESIGNS.find(x => x.key === key);
+      renderDesigns();
+      document.querySelectorAll('#looks button').forEach(b => b.setAttribute('aria-pressed', b.dataset.design === key));
+      document.querySelectorAll('.look-name').forEach(el => { el.textContent = d.name; });
+      document.querySelectorAll('.look-key').forEach(el => { el.textContent = key; });
+      document.querySelectorAll('.look-q').forEach(el => { el.textContent = key === 'bonito' ? '' : '?design=' + key; });
+    }
+    DESIGNS.forEach(d => {
+      const b = document.createElement('button');
+      b.dataset.design = d.key;
+      b.innerHTML = '<img alt="" width="64" height="36"><span></span>';
+      b.querySelector('img').src = 'img/designs/' + d.key + '.jpg';
+      b.querySelector('span').textContent = d.name;
+      b.onclick = () => pickLook(d.key);
+      $('looks').append(b);
+    });
+    pickLook(picked);
 
     // ---- games ---------------------------------------------------------------------
     // A second TV runs app/?show=<game>: bots play it on pretend phones (app/js/show.js)
@@ -1038,7 +1076,7 @@
     document.querySelectorAll('.works a').forEach(a => { a.addEventListener('click', () => pickTv(a.dataset.tv)); });
     document.querySelectorAll('.copy').forEach(b => {
       b.onclick = () => {
-        const text = b.parentNode.firstChild.textContent.trim();
+        const text = b.parentNode.textContent.slice(0, -b.textContent.length).trim();
         navigator.clipboard.writeText(text).then(() => {
           b.textContent = 'Copied';
           setTimeout(() => { b.textContent = 'Copy'; }, 1800);
