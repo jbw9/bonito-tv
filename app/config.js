@@ -7,7 +7,7 @@ window.CONFIG = {
   name: 'THERE',         // shown as "HELLO <NAME>" on the home screen
   city: '',              // e.g. 'Brooklyn'. Blank = detect from the TV's IP address
   units: 'fahrenheit',   // or 'celsius'
-  design: 'bonito',      // or 'horizon', 'departures', 'teletext', 'mediabar' (js/designs.js)
+  design: 'bonito',      // or 'horizon', 'dial', 'panorama', 'mediabar' (js/designs.js)
   // Shared leaderboards and the phone link (remote, games, jam) go through this Supabase
   // project, set up with supabase.sql and free for anyone to use; each TV gets its own
   // room in it. The publishable key is meant to be public. Swap in your own project if

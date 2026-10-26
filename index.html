@@ -181,22 +181,115 @@
     .design.on img { box-shadow: 0 0 0 2px var(--standby); transform: translateY(-3px); }
     .design h3 { margin: 14px 0 2px; font-size: 17px; font-weight: 700; }
     .design p { margin: 0; font-size: 14px; color: var(--mist); }
+    .credit { margin: 6px 0 0; font-size: 13px; color: var(--dusk); }
+    .credit a { color: var(--mist); }
 
-    /* What's in it: a channel list, one row per kind of thing. */
-    .guide { margin-top: 40px; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--night-2); }
-    .guide .ch { display: grid; grid-template-columns: 170px repeat(6, minmax(0, 1fr)); }
-    .guide .ch + .ch { border-top: 1px solid var(--line); }
-    .guide .name { padding: 14px; display: flex; flex-direction: column; justify-content: center; background: var(--night-3); }
-    .guide .name b { font: 900 22px/1 var(--dot); }
-    .guide .name span { font-size: 13px; color: var(--mist); margin-top: 4px; }
-    .guide .show { padding: 12px 14px; border-left: 1px solid var(--line); min-width: 0; }
-    .guide .show b { display: block; font-weight: 600; font-size: 15px; }
-    .guide .show span { display: block; font-size: 13px; color: var(--mist); }
-    @media (max-width: 860px) {
-      .guide .ch { grid-template-columns: 1fr; }
-      .guide .name { flex-direction: row; align-items: baseline; gap: 10px; }
-      .guide .show { border-left: 0; border-top: 1px solid var(--line); grid-column: 1 / -1 !important; }
+    /* Games: a second TV playing by itself, a channel guide beside it, and the phones
+       of the pretend players under it, each showing what that player sees. */
+    .arcade { display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 36px; margin-top: 40px; align-items: start; }
+    /* Above the second TV's glow, which spills out sideways. */
+    .channels { position: relative; z-index: 1; list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--night-2); }
+    .channels li + li { border-top: 1px solid var(--line); }
+    .channels button {
+      position: relative; display: grid; grid-template-columns: 34px 1fr; gap: 0 10px; width: 100%; padding: 12px 14px; border: 0;
+      background: none; text-align: left; color: var(--mist); overflow: hidden;
     }
+    .channels button:hover { color: var(--paper); }
+    .channels .num { grid-row: span 2; font: 900 18px/1.3 var(--dot); color: var(--dusk); }
+    .channels b { font-weight: 600; font-size: 15px; color: inherit; }
+    .channels small { font-size: 12.5px; color: var(--dusk); }
+    .channels [aria-selected="true"] { background: var(--night-3); color: var(--paper); }
+    .channels [aria-selected="true"] .num { color: var(--standby); }
+    /* How long until the next channel, run down by CSS so it pauses with the section. */
+    .channels .left { position: absolute; left: 0; bottom: 0; height: 2px; width: 100%; background: var(--standby); transform-origin: left; transform: scaleX(0); }
+    .channels [aria-selected="true"] .left { animation: runout var(--secs) linear forwards; animation-play-state: var(--play, paused); }
+    @keyframes runout { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+    @media (prefers-reduced-motion: reduce) { .channels [aria-selected="true"] .left { animation: none; } }
+    .set { min-width: 0; }
+    .set .room { margin: 0; padding: 0; }
+    .set .tv { max-width: 720px; margin: 0 auto; }
+    /* Changing channel: a burst of static. */
+    .glass .static {
+      position: absolute; inset: 0; opacity: 0; pointer-events: none;
+      background: repeating-linear-gradient(0deg, rgba(255,255,255,.35) 0 1px, transparent 1px 3px), radial-gradient(#777, #151515);
+    }
+    .glass.zap .static { animation: zap .35s steps(5) forwards; }
+    @keyframes zap { 0% { opacity: 1; background-position: 0 0; } 60% { opacity: .85; background-position: 0 7px; } 100% { opacity: 0; background-position: 0 2px; } }
+    .now { margin: 18px auto 0; max-width: 720px; min-height: 3.2em; font-size: 15px; color: var(--mist); text-align: center; }
+    .now b { color: var(--paper); }
+    .hands { display: flex; justify-content: center; gap: 22px; min-height: 310px; margin-top: 22px; }
+    @media (max-width: 980px) {
+      .arcade { grid-template-columns: 1fr; gap: 20px; }
+      .channels { display: flex; overflow-x: auto; scrollbar-width: none; border-radius: 12px; }
+      .channels li { flex: none; }
+      .channels li + li { border-top: 0; border-left: 1px solid var(--line); }
+      .channels button { grid-template-columns: auto; padding: 10px 14px; }
+      .channels .num, .channels small { display: none; }
+    }
+    @media (max-width: 600px) {
+      .hands { gap: 14px; min-height: 290px; }
+      .hands .hand:nth-child(n+3) { display: none; }
+    }
+
+    /* A phone, drawn like the real phone page (jam/index.html) on its Games tab. */
+    .hand { width: 136px; text-align: center; animation: pickup .5s cubic-bezier(.2,.8,.3,1.2); }
+    @keyframes pickup { from { opacity: 0; transform: translateY(30px) rotate(-4deg); } }
+    @media (prefers-reduced-motion: reduce) { .hand { animation: none; } }
+    .hand .who { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 8px; font-size: 13px; font-weight: 600; color: var(--mist); white-space: nowrap; }
+    .hand .who i { width: 8px; height: 8px; border-radius: 50%; background: var(--seat); }
+    .phone-body {
+      position: relative; aspect-ratio: 9 / 18.5; padding: 5px; border-radius: 22px;
+      background: linear-gradient(160deg, #3b3b42, #141418 60%); box-shadow: 0 16px 34px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.12);
+    }
+    .scr { position: relative; height: 100%; border-radius: 18px; overflow: hidden; background: #121212; color: #fff; padding: 22px 9px 10px; font-size: 10px; line-height: 1.3; display: flex; flex-direction: column; text-align: left; }
+    .scr::before { content: ''; position: absolute; top: 6px; left: 50%; width: 34px; height: 9px; margin-left: -17px; border-radius: 6px; background: #000; }
+    .scr .t { font-weight: 700; font-size: 11px; margin-bottom: 2px; }
+    .scr .s { color: #b3b3b3; font-size: 9px; }
+    .scr .wait { margin: auto 0; display: grid; justify-items: center; gap: 6px; text-align: center; }
+    .scr .wait i { width: 34px; height: 34px; border-radius: 50%; background: var(--seat); }
+    .scr .pad { position: relative; margin: 12px 0 4px; aspect-ratio: 1; border-radius: 10px; background: #2a2a2a; overflow: hidden; }
+    .scr .pad i { position: absolute; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; background: var(--seat); transition: left .1s linear, top .1s linear; }
+    .scr .dpad { position: relative; width: 104px; height: 104px; margin: 18px auto 0; border-radius: 50%; background: #2a2a2a; flex: none; }
+    .scr .dpad b { position: absolute; width: 0; height: 0; border: 7px solid transparent; transition: border-color .08s; }
+    .scr .dpad .up { left: 45px; top: 10px; border-bottom: 10px solid #b3b3b3; border-top: 0; }
+    .scr .dpad .down { left: 45px; bottom: 10px; border-top: 10px solid #b3b3b3; border-bottom: 0; }
+    .scr .dpad .left { top: 45px; left: 10px; border-right: 10px solid #b3b3b3; border-left: 0; }
+    .scr .dpad .right { top: 45px; right: 10px; border-left: 10px solid #b3b3b3; border-right: 0; }
+    .scr .dpad .up.on { border-bottom-color: #1ed760; }
+    .scr .dpad .down.on { border-top-color: #1ed760; }
+    .scr .dpad .left.on { border-right-color: #1ed760; }
+    .scr .dpad .right.on { border-left-color: #1ed760; }
+    .scr .dpad em {
+      position: absolute; left: 33px; top: 33px; width: 38px; height: 38px; border-radius: 50%; background: #3e3e3e;
+      display: grid; place-items: center; font: 800 11px var(--sans); font-style: normal; transition: background .08s;
+    }
+    .scr .dpad em.on { background: #1ed760; color: #000; }
+    .scr .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; margin: 8px 4px 0; }
+    .scr .grid i { aspect-ratio: 1; display: grid; place-items: center; border-radius: 2px; box-shadow: inset 0 0 0 1px #3a3a3c; font: 800 10px var(--sans); font-style: normal; }
+    .scr .grid .ty { box-shadow: inset 0 0 0 1px #878a8c; }
+    .scr .keys { margin-top: auto; display: grid; gap: 2px; }
+    .scr .keys div { display: flex; justify-content: center; gap: 2px; }
+    .scr .keys i { flex: 1; max-width: 10px; height: 14px; border-radius: 2px; background: #818384; }
+    .scr i.c { background: #538d4e; box-shadow: none; }
+    .scr i.p { background: #b59f3b; box-shadow: none; }
+    .scr i.a { background: #3a3a3c; box-shadow: none; }
+    .scr .msg { text-align: center; color: #b3b3b3; font-weight: 700; font-size: 9px; margin: 6px 0; min-height: 12px; }
+    .scr .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 10px; }
+    .scr .choices i { min-height: 54px; padding: 4px; border-radius: 6px; font: 700 8.5px/1.2 var(--sans); font-style: normal; display: grid; place-items: center; text-align: center; overflow: hidden; }
+    .scr .choices.locked i:not(.mine), .scr .choices.shown i:not(.right) { opacity: .3; }
+    .scr .choices .mine { box-shadow: inset 0 0 0 2px #fff; }
+    .scr .board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 12px; }
+    .scr .board i { aspect-ratio: 1; border-radius: 6px; background: #2a2a2a; display: grid; place-items: center; font: 800 20px var(--sans); font-style: normal; }
+    .scr .big { font: 800 22px var(--sans); }
+    .scr .foot { margin-top: auto; text-align: center; color: #727272; font-size: 9px; }
+
+    /* Everything else in the box. */
+    .also { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 56px; }
+    @media (max-width: 980px) { .also { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 520px) { .also { grid-template-columns: 1fr; } }
+    .also div { padding: 20px; border-radius: 14px; background: var(--night-2); border: 1px solid var(--line); }
+    .also h3 { margin: 0 0 8px; font: 900 22px/1 var(--dot); }
+    .also p { margin: 0; font-size: 14px; color: var(--mist); }
 
     /* Install: pick your TV, then Claude Code or by hand. */
     .picker { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 36px; }
@@ -281,7 +374,7 @@
     <a class="mark" href="#"><span class="led"></span>Bonito</a>
     <nav class="links">
       <a href="#designs">Designs</a>
-      <a href="#guide">What's in it</a>
+      <a href="#games">Games</a>
       <a href="#install">Install</a>
       <a href="#ideas">Ideas</a>
       <a class="gh" href="https://github.com/jbw9/bonito-tv">GitHub</a>
@@ -351,10 +444,33 @@
       <div class="designs" id="design-list"></div>
     </section>
 
-    <section class="block wrap" id="guide">
-      <h2>What's in it</h2>
-      <p class="intro">Everything in the box. Party games use phones as controllers: friends scan the code on the TV and they're in, nothing to install.</p>
-      <div class="guide" id="epg"></div>
+    <section class="block wrap" id="games">
+      <h2>Watch it play</h2>
+      <p class="intro">Nobody's touching anything here. These are the real games, played by pretend friends on pretend phones. Friends scan the code on the TV and their phone becomes their controller, with nothing to install. Everyone shares the TV, and each phone shows only what its player needs.</p>
+      <div class="arcade">
+        <ol class="channels" id="channels" role="tablist" aria-label="Games"></ol>
+        <div class="set">
+          <div class="room" id="room-2">
+            <div class="tv">
+              <div class="bezel">
+                <div class="glass" id="glass-2">
+                  <iframe id="screen-2" title="Bonito playing a game by itself" tabindex="-1"></iframe>
+                  <div class="static"></div>
+                </div>
+                <i class="standby-led"></i>
+              </div>
+            </div>
+          </div>
+          <div class="hands" id="hands" aria-hidden="true"></div>
+          <p class="now" id="now" aria-live="polite"></p>
+        </div>
+      </div>
+      <div class="also">
+        <div><h3>Music</h3><p>Your Spotify playlists through the TV speakers. In the jam, friends add songs from their phones. Needs Spotify Premium.</p></div>
+        <div><h3>Remote</h3><p>Any phone is a remote with a keyboard and volume. Scan once and it remembers. High scores are shared, so you can beat your friends.</p></div>
+        <div><h3>Watch</h3><p>Netflix, Hulu, Disney+, Prime Video, Max, Apple TV and more. On Samsung, YouTube without the ads and your HDMI inputs too.</p></div>
+        <div><h3>Casino</h3><p>Blackjack and roulette with pretend chips. Run out and the house tops you up.</p></div>
+      </div>
     </section>
 
     <section class="block wrap" id="install">
@@ -566,7 +682,8 @@
       m.forEach((row, y) => row.forEach((dark, x) => { if (dark) g.fillRect(off + x * cell, off + y * cell, cell, cell); }));
     });
 
-    // Bias lighting: the wall takes the colours at the left, middle and right of the picture.
+    // Bias lighting: the wall behind each TV takes the colours at the left, middle and
+    // right of its picture.
     const probe = document.createElement('canvas');
     probe.width = 3;
     probe.height = 1;
@@ -576,30 +693,35 @@
       return 'rgb(' + [r, g, b].map(v => Math.round(Math.min(255, v * k))).join(',') + ')';
     }
     setInterval(() => {
-      if (!room.classList.contains('on') || document.hidden) return;
-      try {
-        const screen = tv.contentDocument.getElementById('screen');
-        pg.drawImage(screen, 0, 0, 3, 1);
-        const d = pg.getImageData(0, 0, 3, 1).data;
-        room.style.setProperty('--glow-l', boost(d[0], d[1], d[2]));
-        room.style.setProperty('--glow-c', boost(d[4], d[5], d[6]));
-        room.style.setProperty('--glow-r', boost(d[8], d[9], d[10]));
-      } catch (e) {}
+      if (document.hidden) return;
+      [[room, tv], [room2, tv2]].forEach(([wall, set]) => {
+        if (!wall.classList.contains('on')) return;
+        try {
+          const screen = set.contentDocument.getElementById('screen');
+          pg.drawImage(screen, 0, 0, 3, 1);
+          const d = pg.getImageData(0, 0, 3, 1).data;
+          wall.style.setProperty('--glow-l', boost(d[0], d[1], d[2]));
+          wall.style.setProperty('--glow-c', boost(d[4], d[5], d[6]));
+          wall.style.setProperty('--glow-r', boost(d[8], d[9], d[10]));
+        } catch (e) {}
+      });
     }, 400);
 
     // ---- designs --------------------------------------------------------------------
     // The layouts in app/js/home.js; img/designs/ has a screenshot of each.
     const DESIGNS = [
-      { key: 'bonito', name: 'Bonito', about: 'A dot-matrix list under a rainbow light bar. The original.' },
-      { key: 'horizon', name: 'Horizon', about: 'A mountain view that follows the time of day, a big clock and a dock of apps.' },
-      { key: 'departures', name: 'Departures', about: 'Your apps as flights on a split-flap airport board.' },
-      { key: 'teletext', name: 'Teletext', about: 'A page of old TV text, chunky blocks and all.' },
+      // credit: who or what it's after, with a link when it's someone's work.
+      { key: 'bonito', name: 'Bonito', about: 'A dot-matrix list under a rainbow light bar. The original.', credit: ['@tyler_', 'https://www.instagram.com/tyler_/'] },
+      { key: 'horizon', name: 'Horizon', about: 'A mountain view that follows the time of day, a big clock and a dock of apps.', credit: ['@joshuaseage', 'https://www.instagram.com/joshuaseage/'] },
+      { key: 'dial', name: 'Dial', about: 'Every app a station on a radio dial, beside a speaker grille and a proper clock.', credit: ['Dieter Rams\' radios for Braun'] },
+      { key: 'panorama', name: 'Panorama', about: 'Words too big for the screen, sliding past as you move. Plain lists, a glow in the app\'s colour.', credit: ['the Zune HD'] },
       { key: 'mediabar', name: 'Media bar', about: 'Categories across, apps down, over a slow wave. Console menu nostalgia.' },
     ];
     let picked = 'bonito';
     function renderDesigns() {
       $('design-list').textContent = '';
       DESIGNS.forEach(d => {
+        const card = document.createElement('div');
         const b = document.createElement('button');
         b.className = 'design' + (d.key === picked ? ' on' : '');
         b.dataset.design = d.key;
@@ -615,39 +737,212 @@
           renderDesigns();
           room.scrollIntoView({ block: 'center' });
         };
-        $('design-list').append(b);
+        card.append(b);
+        if (d.credit) {
+          const c = document.createElement('p'), [who, url] = d.credit;
+          c.className = 'credit';
+          c.textContent = 'Inspired by ';
+          if (url) {
+            const a = document.createElement('a');
+            a.href = url;
+            a.textContent = who;
+            c.append(a);
+          } else c.append(who);
+          card.append(c);
+        }
+        $('design-list').append(card);
       });
     }
     renderDesigns();
 
-    // ---- what's in it --------------------------------------------------------------
-    // Channels with their shows; `span` is how many of the six columns a show takes.
+    // ---- games ---------------------------------------------------------------------
+    // A second TV runs app/?show=<game>: bots play it on pretend phones (app/js/show.js)
+    // and send what each phone shows, drawn here under the TV. A channel moves on by
+    // itself when its bar runs out.
     const CHANNELS = [
-      ['Arcade', 'One player', [['Flappy Bird', 'Tap OK to flap', 2], ['Dino Run', 'Jump the cactuses', 2], ['Stack', 'Drop it on the beat', 2]]],
-      ['Party', 'Phones are the controllers', [['Trivia', 'Up to 8 players', 2], ['Air Hockey', 'Drag on your phone', 1], ['Pong', 'Two phones', 1], ['Light Cycles', 'Last one riding wins', 2]]],
-      ['Words', 'Solo or a race', [['Wordle', 'Type on your phone', 3], ['Wordle race', 'Everyone, the same word', 3]]],
-      ['Casino', 'No real money', [['Blackjack', 'Beat the dealer', 3], ['Roulette', 'Red or black', 2], ['Tic Tac Toe', 'Two phones', 1]]],
-      ['Music', 'Spotify Premium', [['Your playlists', 'Through the TV speakers', 2], ['The jam', 'Friends add songs from their phones', 4]]],
-      ['Remote', 'Any phone', [['Remote and keyboard', 'Scan once, it remembers', 3], ['Volume', 'Up, down, mute', 1], ['Shared high scores', 'Beat your friends', 2]]],
-      ['Watch', 'On the TV itself', [['Your apps', 'Netflix, Hulu, Disney+, Prime Video, Max, Apple TV and more', 3], ['YouTube', 'Without the ads, on Samsung', 2], ['HDMI', 'Samsung', 1]]],
+      { key: 'wordle', name: 'Wordle race', tag: '2 to 4 phones', secs: 36, about: 'Everyone gets the same word. Your letters stay on your phone and the TV shows only colours, so nobody can copy.' },
+      { key: 'hockey', name: 'Air hockey', tag: '2 to 4 phones', secs: 30, about: 'Your phone is the paddle. Drag your thumb and it moves on the TV straight away.' },
+      { key: 'trivia', name: 'Trivia', tag: '2 to 4 phones', secs: 32, about: 'Answer on your phone. A right answer scores more the faster you get it in.' },
+      { key: 'cycles', name: 'Light cycles', tag: '2 to 4 phones', secs: 28, about: 'Steer with the arrows on your phone and keep off the trails. Last one riding wins.' },
+      { key: 'pong', name: 'Pong', tag: '2 to 4 phones', secs: 28, about: 'A side of the court each and five lives each. Your thumb moves your paddle.' },
+      { key: 'ttt', name: 'Tic tac toe', tag: '2 phones', secs: 22, about: 'Tap a square on your phone when it\'s your turn.' },
+      { key: 'flappy', name: 'Flappy Bird', tag: '1 player', secs: 24, about: 'Press OK to flap, on the TV remote or your phone. High scores are shared.' },
+      { key: 'dino', name: 'Dino run', tag: '1 player', secs: 24, about: 'Jump the cactuses and duck the birds. It keeps getting faster.' },
+      { key: 'stack', name: 'Stack', tag: '1 player', secs: 24, about: 'Drop each block on the one below. Whatever hangs over falls off.' },
     ];
-    CHANNELS.forEach(([name, sub, shows]) => {
-      const row = document.createElement('div');
-      row.className = 'ch';
-      row.innerHTML = '<div class="name"><b></b><span></span></div>';
-      row.querySelector('b').textContent = name;
-      row.querySelector('span').textContent = sub;
-      shows.forEach(([title, about, span]) => {
-        const s = document.createElement('div');
-        s.className = 'show';
-        s.style.gridColumn = 'span ' + span;
-        s.innerHTML = '<b></b><span></span>';
-        s.querySelector('b').textContent = title;
-        s.querySelector('span').textContent = about;
-        row.append(s);
+    const tv2 = $('screen-2'), room2 = $('room-2'), hands = $('hands');
+    let channel = 0;
+
+    // The phones under it: one per seat, made when the seat fills. A screen is redrawn
+    // only when what's on it changes, except the touch pad, whose dot glides.
+    const phones = new Map();
+    const TILES = ['#e21b3c', '#1368ce', '#d89e00', '#26890c']; // trivia's answer colours
+    const KEYROWS = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
+    const esc = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+    const cap = s => s.charAt(0) + s.slice(1).toLowerCase();
+
+    function phone(p) {
+      let ph = phones.get(p.id);
+      if (!ph) {
+        const el = document.createElement('div');
+        el.className = 'hand';
+        el.innerHTML = '<div class="who"><i></i><span></span></div><div class="phone-body"><div class="scr"></div></div>';
+        el.style.setProperty('--seat', p.color);
+        el.querySelector('span').textContent = p.mine ? 'Your phone' : cap(p.name) + '\'s phone';
+        hands.append(el);
+        ph = { el, scr: el.querySelector('.scr'), html: '' };
+        phones.set(p.id, ph);
+      }
+      ph.seen = true;
+      return ph;
+    }
+
+    function paint(ph, html) {
+      if (ph.html === html) return;
+      ph.html = html;
+      ph.scr.innerHTML = html;
+    }
+
+    function waiting(ph, p) {
+      paint(ph, '<div class="wait"><i></i><div class="t">You\'re in, ' + esc(cap(p.name)) + '</div><div class="s">Waiting for everyone</div></div>');
+    }
+
+    function pad(ph, title, x, y) {
+      paint(ph, '<div class="t">' + title + '</div><div class="s">Your side, as on the TV</div><div class="pad"><i></i></div><div class="foot">Drag to move</div>');
+      const dot = ph.scr.querySelector('.pad i');
+      dot.style.left = Math.max(0, Math.min(1, x)) * 100 + '%';
+      dot.style.top = Math.max(0, Math.min(1, y)) * 100 + '%';
+    }
+
+    // Arrows for steering, or with OK as the remote; `lit` is the one under the thumb.
+    function arrows(ph, title, lit, remote) {
+      paint(ph, '<div class="t">' + title + '</div><div class="s">' + (remote ? 'Your phone is the remote' : 'Steer with the arrows') + '</div>' +
+        '<div class="dpad"><b class="up"></b><b class="down"></b><b class="left"></b><b class="right"></b>' + (remote ? '<em class="ok">OK</em>' : '') + '</div>');
+      ph.scr.querySelectorAll('.dpad > *').forEach(b => b.classList.toggle('on', b.classList.contains(lit)));
+    }
+
+    // Wordle race: the letters are the bot's own typing, as only its phone knows them.
+    function word(ph, p, st, typed) {
+      const b = typed || { words: [], draft: '' }, rows = p.rows || [], best = {};
+      let cells = '';
+      for (let r = 0; r < 6; r++) {
+        for (let c = 0; c < 5; c++) {
+          const done = r < rows.length, ch = done ? (b.words[r] || '')[c] : r === rows.length ? b.draft[c] : '';
+          if (done && ch && 'apc'.indexOf(rows[r][c]) > 'apc'.indexOf(best[ch])) best[ch] = rows[r][c];
+          cells += '<i class="' + (done ? rows[r][c] : ch ? 'ty' : '') + '">' + (ch || '') + '</i>';
+        }
+      }
+      const keys = KEYROWS.map(row => '<div>' + row.split('').map(k => '<i class="' + (best[k] || '') + '"></i>').join('') + '</div>').join('');
+      const msg = st.word ? 'The word was ' + st.word
+        : p.solved ? 'Got it in ' + rows.length + '!'
+        : rows.length === 6 ? 'Out of guesses'
+        : st.left != null ? Math.floor(st.left / 60) + ':' + String(st.left % 60).padStart(2, '0') + ' left' : '';
+      paint(ph, '<div class="t">Wordle race</div><div class="grid">' + cells + '</div><div class="msg">' + msg + '</div><div class="keys">' + keys + '</div>');
+    }
+
+    function trivia(ph, p, st) {
+      if (!st.q) return paint(ph, '<div class="wait"><div class="t">' + (st.mode === 'over' ? 'Final score' : 'Get ready') + '</div><div class="big">' + (p.score || 0) + '</div></div>');
+      const pick = p.bot ? p.bot.pick : null, shown = st.q.correct != null;
+      const tiles = st.q.answers.map((a, i) => '<i style="background:' + TILES[i] + '" class="' + (i === pick ? 'mine ' : '') + (i === st.q.correct ? 'right' : '') + '">' + esc(a) + '</i>').join('');
+      paint(ph, '<div class="t">Question ' + st.q.n + ' of ' + st.q.of + '</div><div class="s">' + (p.score || 0) + ' points</div>' +
+        '<div class="choices ' + (shown ? 'shown' : pick != null ? 'locked' : '') + '">' + tiles + '</div>' +
+        '<div class="foot">' + (shown ? (p.gain ? 'Right! +' + p.gain : 'Not this time') : pick != null ? 'Locked in' : 'Tap your answer') + '</div>');
+    }
+
+    function board(ph, p, st) {
+      const seat = st.players.indexOf(p);
+      const cells = (st.board || []).map(s => (s == null ? '<i></i>' : '<i style="color:' + st.players[s].color + '">' + 'XO'[s] + '</i>')).join('');
+      const line = st.mode === 'over' ? 'Round over' : st.turn === p.id ? 'Your turn' : 'Their turn';
+      paint(ph, '<div class="t">Tic tac toe</div><div class="s">You\'re ' + 'XO'[seat] + '</div><div class="board">' + cells + '</div><div class="foot">' + line + '</div>');
+    }
+
+    window.addEventListener('message', e => {
+      if (e.source !== tv2.contentWindow || !e.data || !e.data.show) return;
+      const snap = e.data.show, st = snap.state, c = CHANNELS[channel];
+      if (snap.game !== c.key) return;
+      phones.forEach(ph => { ph.seen = false; });
+      if (!st || !st.players) {
+        // On your own: one phone as the remote, pressing what the autopilot presses.
+        if (!st) arrows(phone({ id: 'you', name: 'YOU', color: '#1ed760', mine: true }), c.name, snap.held, true);
+      } else {
+        // Party games: hockey and pong positions are in the TV's pixels (app/js/hockey.js, pong.js).
+        st.players.forEach(p => {
+          const ph = phone(p), bot = p.bot || {};
+          if (st.mode === 'lobby') waiting(ph, p);
+          else if (c.key === 'wordle') word(ph, p, st, snap.typing[p.id]);
+          else if (c.key === 'hockey') pad(ph, 'Air hockey', (bot.x - (bot.side ? 960 : 160)) / 800, (bot.y - 170) / 800);
+          else if (c.key === 'pong') pad(ph, 'Pong', [0.08, 0.92, bot.pos, bot.pos][bot.side], [bot.pos, bot.pos, 0.08, 0.92][bot.side]);
+          else if (c.key === 'cycles') arrows(ph, 'Light cycles', bot.alive ? bot.dir : null);
+          else if (c.key === 'trivia') trivia(ph, p, st);
+          else if (c.key === 'ttt') board(ph, p, st);
+        });
+      }
+      phones.forEach((ph, id) => {
+        if (ph.seen) return;
+        ph.el.remove();
+        phones.delete(id);
       });
-      $('epg').append(row);
     });
+
+    function tuneTo(i, zap) {
+      channel = i;
+      const c = CHANNELS[i];
+      document.querySelectorAll('.channels button').forEach((b, j) => {
+        b.setAttribute('aria-selected', j === i);
+        // Restarts the bar.
+        const bar = b.querySelector('.left');
+        bar.style.animation = 'none';
+        void bar.offsetWidth;
+        bar.style.animation = '';
+      });
+      // On phones the guide is a strip that scrolls sideways; keep the channel on it in view.
+      const tab = document.querySelectorAll('.channels li')[i];
+      $('channels').scrollTo({ left: tab.offsetLeft - 16, behavior: 'smooth' });
+      $('now').innerHTML = '<b></b> <span></span>';
+      $('now').querySelector('b').textContent = c.name + '.';
+      $('now').querySelector('span').textContent = c.about;
+      hands.textContent = '';
+      phones.clear();
+      if (!room2.classList.contains('on')) return;
+      tv2.contentWindow.postMessage({ show: c.key }, location.origin);
+      if (zap) {
+        $('glass-2').classList.remove('zap');
+        void $('glass-2').offsetWidth;
+        $('glass-2').classList.add('zap');
+      }
+    }
+
+    CHANNELS.forEach((c, i) => {
+      const li = document.createElement('li');
+      li.innerHTML = '<button role="tab"><span class="num"></span><b></b><small></small><i class="left"></i></button>';
+      const b = li.querySelector('button');
+      b.style.setProperty('--secs', c.secs + 's');
+      li.querySelector('.num').textContent = String(i + 1).padStart(2, '0');
+      li.querySelector('b').textContent = c.name;
+      li.querySelector('small').textContent = c.tag;
+      b.onclick = () => tuneTo(i, true);
+      b.querySelector('.left').addEventListener('animationend', () => tuneTo((channel + 1) % CHANNELS.length, true));
+      $('channels').append(li);
+    });
+    tuneTo(0);
+
+    // It switches on as it comes into view, and off again (its bar paused) once well out of it.
+    new IntersectionObserver(entries => {
+      const seen = entries[0].isIntersecting;
+      $('channels').style.setProperty('--play', seen ? 'running' : 'paused');
+      if (seen === !!tv2.onload) return;
+      if (seen) {
+        tv2.onload = () => {
+          room2.classList.add('on');
+          tuneTo(channel);
+        };
+        tv2.src = 'app/?show=' + CHANNELS[channel].key;
+      } else {
+        room2.classList.remove('on');
+        tv2.onload = null;
+        tv2.src = 'about:blank';
+      }
+    }, { rootMargin: '200px 0px' }).observe(room2);
 
     // ---- ideas board ----------------------------------------------------------------
     // The `ideas` table in supabase.sql. Votes are remembered in this browser so a click

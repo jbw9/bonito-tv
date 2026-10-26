@@ -176,7 +176,21 @@ App.screens.home = (() => {
     g.stroke();
   }
 
+  // Sections across, items down, for Panorama and Media bar; rebuilt each frame, as
+  // inputs come and go.
+  function menu() {
+    const all = playableApps();
+    const out = [
+      { key: 'tv', name: 'TV & Video', items: all.filter(a => a.group !== 'games').map(app => ({ app })) },
+      { key: 'games', name: 'Games', items: all.filter(a => a.group === 'games').map(app => ({ app })) },
+    ];
+    if (Phones.enabled()) out.push({ key: 'connect', name: 'Phone', items: [{ app: CONNECT, connect: true }] });
+    out.push({ key: 'settings', name: 'Settings', items: [{ app: SETTINGS, settings: true }] });
+    return out.filter(c => c.items.length);
+  }
+
   // ---- Bonito: the dot-matrix list ------------------------------------------
+  // After a TV home screen by @tyler_ (instagram.com/tyler_).
 
   const bonito = (() => {
     const ROW_H = 96, LIST_Y = 560, LIST_X = 130;
@@ -251,7 +265,8 @@ App.screens.home = (() => {
   })();
 
   // ---- Horizon: a landscape, a big clock behind the mountain, and a dock ----
-  // After a smart TV home seen on Instagram: the scene is drawn here, by time of day.
+  // After a smart TV home by @joshuaseage (instagram.com/joshuaseage); the scene is
+  // drawn here, by time of day.
 
   const horizon = (() => {
     const SCENES = {
@@ -552,201 +567,311 @@ App.screens.home = (() => {
     return { axis: 'h', draw, key };
   })();
 
-  // ---- Departures: an airport split-flap board ------------------------------
+  // ---- Dial: a radio, with every app a station ------------------------------
+  // After Dieter Rams' radios and clocks for Braun: a speaker grille, a clock with an
+  // orange second hand, and a tuning scale that slides under a fixed needle.
 
-  const departures = (() => {
-    const PLANE = ['.......#....', '.......##...', '#......###..', '##....#####.', '############', '##....#####.', '#......###..', '.......##...', '.......#....'];
-    const ROWS = 8, ROW_Y = 300, ROW_H = 84, NAME_W = 14;
-    const FLAPS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    const COLS = { time: 150, icon: 350, name: 440, gate: 1130, remarks: 1300 };
+  const dial = (() => {
+    const PANEL = '#e8e5de', FACE = '#f6f5f1', INK = '#1d1c1a', GREY = '#77736b', ORANGE = '#ee6a1f';
+    const STEP = 250, SCALE_X = 120, SCALE_Y = 690, SCALE_W = W - 240, SCALE_H = 170;
+    const CLOCK_X = W - 310, CLOCK_Y = 360, CLOCK_R = 190, INFO_X = 860;
 
-    function pad(str, n) {
-      str = str.slice(0, n);
-      while (str.length < n) str += ' ';
-      return str;
-    }
-
-    // Letters flick through the alphabet and land one after another, left to right.
-    function flip(str, since) {
-      const t = clock - since;
-      if (t > 0.12 + str.length * 0.03) return str;
-      let out = '';
-      for (let i = 0; i < str.length; i++) {
-        out += t > 0.12 + i * 0.03 || str[i] === ' ' ? str[i] : FLAPS[Math.floor(clock * 40 + i * 7) % FLAPS.length];
+    const panel = makeCanvas(W, H, b => {
+      const grad = b.createLinearGradient(0, 0, 0, H);
+      grad.addColorStop(0, '#efece6');
+      grad.addColorStop(1, '#dcd8cf');
+      b.fillStyle = grad;
+      b.fillRect(0, 0, W, H);
+      // The grille: holes punched in the panel, each with a lit lower lip.
+      for (let y = 0; y < 18; y++) {
+        for (let x = 0; x < 29; x++) {
+          const cx = 132 + x * 22, cy = 242 + y * 22;
+          b.fillStyle = 'rgba(255,255,255,0.75)';
+          b.beginPath();
+          b.arc(cx, cy + 1.2, 6, 0, Math.PI * 2);
+          b.fill();
+          b.fillStyle = '#2b2a27';
+          b.beginPath();
+          b.arc(cx, cy, 6, 0, Math.PI * 2);
+          b.fill();
+        }
       }
-      return out;
+    });
+
+    function knob(g, x, y, r, turn) {
+      g.save();
+      g.shadowColor = 'rgba(0,0,0,0.25)';
+      g.shadowBlur = 18;
+      g.shadowOffsetY = 6;
+      const grad = g.createLinearGradient(x, y - r, x, y + r);
+      grad.addColorStop(0, '#f4f2ed');
+      grad.addColorStop(1, '#c9c4ba');
+      g.fillStyle = grad;
+      g.beginPath();
+      g.arc(x, y, r, 0, Math.PI * 2);
+      g.fill();
+      g.restore();
+      g.strokeStyle = INK;
+      g.lineWidth = 5;
+      g.lineCap = 'round';
+      g.beginPath();
+      g.moveTo(x + Math.sin(turn) * r * 0.35, y - Math.cos(turn) * r * 0.35);
+      g.lineTo(x + Math.sin(turn) * r * 0.8, y - Math.cos(turn) * r * 0.8);
+      g.stroke();
     }
 
-    function gate(row, i) {
-      if (row.app.hdmi) return 'H' + row.app.hdmi;
-      if (row.child || row.folder) return 'G' + two(i);
-      return 'A' + two(i);
+    function hand(g, angle, length, width, color) {
+      g.strokeStyle = color;
+      g.lineWidth = width;
+      g.lineCap = 'round';
+      g.beginPath();
+      g.moveTo(CLOCK_X - Math.sin(angle) * length * 0.16, CLOCK_Y + Math.cos(angle) * length * 0.16);
+      g.lineTo(CLOCK_X + Math.sin(angle) * length, CLOCK_Y - Math.cos(angle) * length);
+      g.stroke();
     }
 
-    function remarks(row, on) {
-      if (row.connect) return 'SCAN QR';
-      if (row.folder) return on ? (open ? 'OK CLOSES' : 'OK OPENS') : 'GAMES';
-      if (row.app.hdmi) return 'ARRIVED';
-      return on ? 'BOARDING' : 'ON TIME';
+    function drawClock(g, now) {
+      g.save();
+      g.shadowColor = 'rgba(0,0,0,0.18)';
+      g.shadowBlur = 30;
+      g.shadowOffsetY = 10;
+      g.fillStyle = FACE;
+      g.beginPath();
+      g.arc(CLOCK_X, CLOCK_Y, CLOCK_R, 0, Math.PI * 2);
+      g.fill();
+      g.restore();
+      for (let i = 0; i < 60; i++) {
+        const a = i / 60 * Math.PI * 2, hour = i % 5 === 0, r0 = CLOCK_R * (hour ? 0.8 : 0.88);
+        g.strokeStyle = hour ? INK : GREY;
+        g.lineWidth = hour ? 7 : 2;
+        g.lineCap = 'butt';
+        g.beginPath();
+        g.moveTo(CLOCK_X + Math.sin(a) * r0, CLOCK_Y - Math.cos(a) * r0);
+        g.lineTo(CLOCK_X + Math.sin(a) * CLOCK_R * 0.93, CLOCK_Y - Math.cos(a) * CLOCK_R * 0.93);
+        g.stroke();
+      }
+      const s = now.getSeconds() + now.getMilliseconds() / 1000, m = now.getMinutes() + s / 60, h = now.getHours() % 12 + m / 60;
+      hand(g, h / 12 * Math.PI * 2, CLOCK_R * 0.52, 12, INK);
+      hand(g, m / 60 * Math.PI * 2, CLOCK_R * 0.78, 8, INK);
+      hand(g, s / 60 * Math.PI * 2, CLOCK_R * 0.86, 3, ORANGE);
+      g.fillStyle = ORANGE;
+      g.beginPath();
+      g.arc(CLOCK_X, CLOCK_Y, 9, 0, Math.PI * 2);
+      g.fill();
+    }
+
+    function about(row) {
+      if (row.folder) return open ? 'OK puts the games away' : 'OK tunes into ' + playableApps().filter(a => a.group === 'games').length + ' games';
+      if (row.connect) return 'Remote, Spotify and games on your phone';
+      if (row.settings) return 'Apps, design, clock';
+      return kind(row.app);
     }
 
     function draw(g) {
-      drawBackground(g, design.bg[0], design.bg[1]);
-      const now = new Date();
-      drawIcon(g, PLANE, 120, 92, 7, design.ink);
-      drawText(g, 'DEPARTURES', 240, 84, 9, design.ink);
-      drawText(g, two(now.getHours()) + ':' + two(now.getMinutes()), W - 120, 84, 9, design.ink, { align: 'right' });
-      let info = DAYS[now.getDay()] + ' ' + now.getDate() + ' ' + MONTHS[now.getMonth()];
-      if (weather) info += '     ' + (CONFIG.city ? CONFIG.city + ' ' : '') + weather.temp + '° ' + skyWords(weather);
-      drawText(g, info, 240, 178, 3.5, design.dim, { style: 'thin' });
-      drawText(g, 'WELCOME ' + CONFIG.name, W - 120, 178, 3.5, design.dim, { style: 'thin', align: 'right' });
+      g.drawImage(panel, 0, 0);
+      const now = new Date(), h = now.getHours();
+      g.textBaseline = 'alphabetic';
+      g.textAlign = 'left';
+      g.fillStyle = INK;
+      g.font = font(500, 40);
+      const hello = h < 5 || h >= 18 ? 'Good evening' : h < 12 ? 'Good morning' : 'Good afternoon';
+      g.fillText(hello + ', ' + title(CONFIG.name), 120, 150);
 
-      [['TIME', 'time'], ['DESTINATION', 'name'], ['GATE', 'gate'], ['REMARKS', 'remarks']].forEach(c => drawText(g, c[0], COLS[c[1]], 246, 3.2, design.mute, { style: 'thin' }));
-      g.fillStyle = design.mute;
-      g.fillRect(120, 280, W - 240, 2);
-
-      const list = rows();
-      const top = Math.max(0, Math.min(sel - 3, list.length - ROWS));
-      // Departures every five minutes from the next five-minute mark.
-      const first = Math.ceil((now.getHours() * 60 + now.getMinutes() + 1) / 5) * 5;
-      list.slice(top, top + ROWS).forEach((row, j) => {
-        const i = top + j, y = ROW_Y + j * ROW_H, on = i === sel && focus === 'list';
-        if (on) {
-          g.fillStyle = 'rgba(255,197,61,0.1)';
-          g.fillRect(120, y - 6, W - 240, ROW_H - 10);
-          g.fillStyle = design.ink;
-          g.fillRect(120, y - 6, 6, ROW_H - 10);
-        } else if (j % 2) {
-          g.fillStyle = 'rgba(255,255,255,0.025)';
-          g.fillRect(120, y - 6, W - 240, ROW_H - 10);
-        }
-        const ink = on ? design.ink : design.soft, m = (first + i * 5) % 1440;
-        drawText(g, two(Math.floor(m / 60)) + ':' + two(m % 60), COLS.time, y + 6, 5, ink);
-        g.drawImage(ICONS.tile(row.app, 60), COLS.icon, y + 2);
-        const name = pad((row.child ? '  ' : '') + row.app.name, NAME_W);
-        drawText(g, on ? flip(name, changed) : name, COLS.name, y + 6, 5, ink);
-        drawText(g, gate(row, i + 1), COLS.gate, y + 6, 5, ink);
-        const r = pad(remarks(row, on), 9);
-        const blink = on && r.trim() === 'BOARDING' ? 0.55 + 0.45 * Math.cos(clock * 5) : 1;
-        drawText(g, on ? flip(r, changed) : r, COLS.remarks, y + 6, 5, on ? '#7dff9a' : ink, { alpha: blink });
-      });
-      if (list.length > ROWS) drawText(g, (top + 1) + '-' + Math.min(list.length, top + ROWS) + ' OF ' + list.length, W - 120, 980, 3, design.mute, { style: 'thin', align: 'right' });
-
-      // CONNECT PHONE pins its QR code over the right of the board.
-      if (list[sel].connect) {
-        const qr = phoneQr(360);
-        g.fillStyle = '#0b0b0b';
-        g.fillRect(W - 120 - qr.width - 40, 300, qr.width + 40, qr.height + 100);
-        g.drawImage(qr, W - 120 - qr.width - 20, 320);
-        drawText(g, 'ROOM ' + ROOM, W - 140 - qr.width / 2, 340 + qr.height + 10, 3.5, design.dim, { style: 'thin', align: 'center' });
+      drawClock(g, now);
+      g.textAlign = 'center';
+      g.font = font(500, 28);
+      g.fillStyle = GREY;
+      g.fillText(DAY_NAMES[now.getDay()] + ' ' + now.getDate() + ' ' + MONTH_NAMES[now.getMonth()], CLOCK_X, CLOCK_Y + CLOCK_R + 62);
+      if (weather) {
+        g.fillStyle = INK;
+        g.fillText(weather.temp + '°  ' + skyWords(weather), CLOCK_X, CLOCK_Y + CLOCK_R + 100);
       }
 
+      // What the needle is on.
+      const list = rows(), row = list[sel];
+      g.textAlign = 'left';
+      let top = 250;
+      if (row.connect) {
+        const qr = phoneQr(260);
+        g.drawImage(qr, INFO_X, 200);
+        top = 200 + qr.height - 150;
+      } else g.drawImage(ICONS.tile(row.app, 150), INFO_X, top);
+      g.fillStyle = INK;
+      g.font = font(600, 76);
+      g.fillText(row.folder ? 'Games' : title(row.app.name), INFO_X, top + 250, CLOCK_X - CLOCK_R - INFO_X - 40);
+      g.fillStyle = GREY;
+      g.font = font(500, 30);
+      g.fillText(about(row) + '  ·  ' + (88 + sel * 1.6).toFixed(1) + ' FM', INFO_X, top + 302);
+
+      // The scale, slid so the picked station sits under the needle.
+      g.save();
+      ICONS.rounded(g, SCALE_X, SCALE_Y, SCALE_W, SCALE_H, 14);
+      g.fillStyle = FACE;
+      g.fill();
+      g.clip();
+      const mid = W / 2;
+      for (let i = -1; i <= list.length; i++) {
+        for (let k = 0; k < 5; k++) {
+          const x = mid + (i - scrollPos + k / 5) * STEP;
+          if (x < SCALE_X - 10 || x > SCALE_X + SCALE_W + 10) continue;
+          const major = k === 0 && i >= 0 && i < list.length;
+          g.fillStyle = major ? INK : '#b9b4aa';
+          g.fillRect(x - (major ? 2 : 1), SCALE_Y + 18, major ? 4 : 2, major ? 46 : 22);
+        }
+      }
+      g.textAlign = 'center';
+      list.forEach((r, i) => {
+        const x = mid + (i - scrollPos) * STEP;
+        if (x < SCALE_X - STEP || x > SCALE_X + SCALE_W + STEP) return;
+        g.fillStyle = GREY;
+        g.font = font(500, 20);
+        g.fillText((88 + i * 1.6).toFixed(1), x, SCALE_Y + 92);
+        g.fillStyle = i === sel ? INK : GREY;
+        g.font = font(i === sel ? 600 : 500, 28);
+        g.fillText(r.folder ? 'Games' : title(r.app.short), x, SCALE_Y + 140, STEP - 20);
+      });
+      // The scale fades out at both ends, like the window of a real dial.
+      [[SCALE_X, 1], [SCALE_X + SCALE_W, -1]].forEach(([x, d]) => {
+        const fade = g.createLinearGradient(x, 0, x + d * 220, 0);
+        fade.addColorStop(0, FACE);
+        fade.addColorStop(1, 'rgba(246,245,241,0)');
+        g.fillStyle = fade;
+        g.fillRect(Math.min(x, x + d * 220), SCALE_Y, 220, SCALE_H);
+      });
+      g.restore();
+      ICONS.rounded(g, SCALE_X + 0.5, SCALE_Y + 0.5, SCALE_W - 1, SCALE_H - 1, 14);
+      g.strokeStyle = '#c8c3b9';
+      g.lineWidth = 2;
+      g.stroke();
+      g.save();
+      g.shadowColor = 'rgba(238,106,31,0.55)';
+      g.shadowBlur = 14;
+      // Down to the ticks, so the station names under it stay readable.
+      g.fillStyle = focus === 'list' ? ORANGE : '#c9a48c';
+      g.fillRect(mid - 3, SCALE_Y - 16, 6, 92);
+      g.restore();
+
+      knob(g, W - 360, 975, 40, 0.6);
+      knob(g, W - 200, 975, 56, scrollPos * 0.7);
+      g.textAlign = 'left';
       Music.draw(g, focus === 'music');
-      drawLightBar(g);
     }
 
-    return { axis: 'v', draw };
+    return { axis: 'h', draw };
   })();
 
-  // ---- Teletext: a page of the old TV text service --------------------------
+  // ---- Panorama: words too big for the screen --------------------------------
+  // After the Zune HD and Windows Phone: the section names run off the edge and slide
+  // past as you go left and right; the lists are plain words.
 
-  const teletext = (() => {
-    const BLUE = '#0000ff', CYAN = '#00ffff', YELLOW = '#ffff00', WHITE = '#ffffff', GREEN = '#00ff00', RED = '#ff0000', MAGENTA = '#ff00ff';
-    const ROWS = 9, ROW_Y = 372, ROW_H = 62, CELL = 5;
-    const mosaics = {};
-
-    // Pages: apps from 101, the games folder 200 and its games from 201, inputs 300s.
-    function page(list, row, i) {
-      if (row.folder) return 200;
-      if (row.child) return 200 + list.filter((r, j) => r.child && j <= i).length;
-      if (row.app.hdmi) return 300 + row.app.hdmi;
-      if (row.connect) return 400;
-      if (row.settings) return 500;
-      return 100 + list.filter((r, j) => !r.folder && !r.child && !r.app.hdmi && j <= i).length;
-    }
-
-    // The app's tile in big chunky blocks, like a teletext picture.
-    function mosaic(app) {
-      if (!mosaics[app.key]) {
-        const small = makeCanvas(52, 52, b => b.drawImage(ICONS.tile(app, 104), 0, 0, 52, 52));
-        mosaics[app.key] = makeCanvas(312, 312, b => {
-          b.imageSmoothingEnabled = false;
-          b.drawImage(small, 0, 0, 312, 312);
-        });
-      }
-      return mosaics[app.key];
-    }
-
-    function band(g, y, h, color) {
-      g.fillStyle = color;
-      g.fillRect(80, y, W - 160, h);
-    }
+  const panorama = (() => {
+    const LIST_X = 110, LIST_Y = 500, ROW_H = 96, SHOWN = 5;
+    let cat = 0, strip = 0, catAt = 0, items = {}, glowAt = 0, glowKey = '';
 
     function draw(g) {
-      g.fillStyle = '#000000';
-      g.fillRect(0, 0, W, H);
+      const m = menu();
+      cat = Math.min(cat, m.length - 1);
+      const c = m[cat], i = Math.min(items[c.key] || 0, c.items.length - 1), it = c.items[i];
       const now = new Date();
-      drawText(g, 'P100', 100, 44, 4.5, WHITE);
-      drawText(g, '100 BONITO', 340, 44, 4.5, WHITE);
-      drawText(g, DAYS[now.getDay()] + ' ' + now.getDate() + ' ' + MONTHS[now.getMonth()], 1080, 44, 4.5, WHITE);
-      drawText(g, two(now.getHours()) + ':' + two(now.getMinutes()) + '/' + two(now.getSeconds()), W - 100, 44, 4.5, YELLOW, { align: 'right' });
 
-      // Title in double height on a blue band, with a strip of block graphics.
-      band(g, 108, 168, BLUE);
-      g.save();
-      g.imageSmoothingEnabled = false;
-      g.translate(130, 128);
-      g.scale(1, 1.75);
-      drawText(g, 'BONITO', 0, 0, 10, YELLOW);
-      g.restore();
-      for (let i = 0; i < 15; i++) {
-        g.fillStyle = [CYAN, MAGENTA, GREEN, YELLOW][i % 4];
-        if ((i * 7) % 5 < 3) g.fillRect(820 + i * 36, 140 + ((i * 3) % 4) * 24, 30, 22);
+      g.fillStyle = '#060608';
+      g.fillRect(0, 0, W, H);
+      // A glow in the colour of whatever's picked, rising in as it changes.
+      const key = it.app.key;
+      if (key !== glowKey) {
+        glowKey = key;
+        glowAt = clock;
       }
-      if (weather) {
-        const ic = skyIcon(weather);
-        drawIcon(g, ic, W - 400, 156, 9, YELLOW);
-        drawText(g, weather.temp + '°', W - 130, 168, 8, WHITE, { align: 'right' });
-      }
+      const glow = g.createRadialGradient(W * 0.8, H * 0.7, 0, W * 0.8, H * 0.7, 950);
+      const [r, gr, b] = hexRgb(it.app.color === '#F4F6F8' ? '#5b6cff' : it.app.color);
+      const a = 0.42 * Math.min(1, (clock - glowAt) * 2.5);
+      glow.addColorStop(0, 'rgba(' + r + ',' + gr + ',' + b + ',' + a + ')');
+      glow.addColorStop(1, 'rgba(' + r + ',' + gr + ',' + b + ',0)');
+      g.fillStyle = glow;
+      g.fillRect(0, 0, W, H);
 
-      drawText(g, 'HELLO ' + CONFIG.name, 100, 300, CELL, CYAN);
-      if (weather) drawText(g, (CONFIG.city ? CONFIG.city + ' ' : '') + skyWords(weather), W - 100, 300, CELL, GREEN, { align: 'right' });
+      g.textBaseline = 'alphabetic';
+      g.textAlign = 'left';
+      g.fillStyle = '#ffffff';
+      g.font = font(700, 22);
+      g.globalAlpha = 0.7;
+      g.fillText('B O N I T O', 112, 92);
+      g.globalAlpha = 1;
+      g.textAlign = 'right';
+      g.font = font(300, 46);
+      g.fillText(timeText(now), W - 110, 100);
+      g.font = font(400, 24);
+      g.globalAlpha = 0.65;
+      g.fillText(DAY_NAMES[now.getDay()] + ' ' + now.getDate() + ' ' + MONTH_NAMES[now.getMonth()] + (weather ? '   ' + weather.temp + '° ' + skyWords(weather).toLowerCase() : ''), W - 110, 140);
+      g.globalAlpha = 1;
 
-      const list = rows();
-      const top = Math.max(0, Math.min(sel - 4, list.length - ROWS));
-      list.slice(top, top + ROWS).forEach((row, j) => {
-        const i = top + j, y = ROW_Y + j * ROW_H, on = i === sel && focus === 'list';
-        const name = (row.child ? '  ' : '') + row.app.name + (row.folder ? (open ? ' -' : ' +') : '');
-        const num = String(page(list, row, i));
-        if (on) {
-          g.fillStyle = CYAN;
-          g.fillRect(80, y - 10, 1060, ROW_H - 4);
-        }
-        const x = 100;
-        const w = drawText(g, name, x, y, CELL, on ? '#000000' : WHITE);
-        const dots = Math.max(1, Math.floor((1060 - x - w - 30 * CELL) / (6 * CELL)));
-        drawText(g, '.'.repeat(dots), x + w + 6 * CELL, y, CELL, on ? BLUE : CYAN);
-        drawText(g, num, 1100, y, CELL, on ? '#000000' : YELLOW, { align: 'right' });
+      // The section names in one long strip, the picked one at the left edge.
+      g.textAlign = 'left';
+      g.font = font(200, 250);
+      const starts = [];
+      let x = 0;
+      m.forEach(s => {
+        starts.push(x);
+        x += g.measureText(s.name.toLowerCase()).width + 110;
       });
+      strip += (starts[cat] - strip) * 0.14;
+      m.forEach((s, j) => {
+        g.globalAlpha = j === cat ? 1 : 0.22;
+        g.fillText(s.name.toLowerCase(), 96 + starts[j] - strip, 380);
+      });
+      g.globalAlpha = 1;
 
-      const row = list[sel];
-      if (row.connect) {
-        const qr = phoneQr(312);
-        g.drawImage(qr, W - 100 - qr.width, ROW_Y - 10);
-        drawText(g, 'ROOM ' + ROOM, W - 100 - qr.width / 2, ROW_Y + qr.height + 20, 4, YELLOW, { align: 'center' });
-      } else if (!row.settings) {
-        g.drawImage(mosaic(row.app), W - 412, ROW_Y - 10);
-        drawText(g, kind(row.app).toUpperCase(), W - 256, ROW_Y + 330, 4, GREEN, { align: 'center' });
+      // The list slides in from the right when the section changes.
+      const t = Math.min(1, (clock - catAt) * 3.5), ease = 1 - Math.pow(1 - t, 3);
+      const top = Math.max(0, Math.min(i - 2, c.items.length - SHOWN));
+      g.save();
+      g.translate((1 - ease) * 140, 0);
+      g.globalAlpha = ease;
+      c.items.slice(top, top + SHOWN).forEach((row, j) => {
+        const on = top + j === i && focus === 'list', y = LIST_Y + j * ROW_H + (top + j > i ? 34 : 0);
+        g.fillStyle = on ? '#ffffff' : 'rgba(255,255,255,0.42)';
+        g.font = font(on ? 400 : 300, 64);
+        g.fillText(row.connect ? 'connect phone' : row.settings ? 'settings' : title(row.app.name).toLowerCase(), LIST_X, y);
+        if (top + j === i) {
+          g.fillStyle = row.app.color === '#F4F6F8' ? '#9aa6ff' : row.app.color;
+          g.font = font(500, 26);
+          g.fillText(row.connect ? 'remote, spotify and games on your phone' : row.settings ? 'apps, design, clock' : kind(row.app).toLowerCase(), LIST_X + 2, y + 42);
+        }
+      });
+      g.restore();
+
+      // The picked app's tile, or the phone code.
+      if (it.connect) {
+        const qr = phoneQr(340);
+        g.drawImage(qr, W - 150 - qr.width, 470);
+      } else if (!it.settings) {
+        g.save();
+        g.shadowColor = 'rgba(0,0,0,0.5)';
+        g.shadowBlur = 50;
+        g.shadowOffsetY = 20;
+        g.drawImage(ICONS.tile(it.app, 300), W - 450, 470);
+        g.restore();
       }
-
-      // Fastext row along the bottom.
-      const hints = [['UP/DOWN', RED], ['OK OPENS', GREEN], ['BACK', YELLOW], ['ROOM ' + ROOM, CYAN]];
-      hints.forEach((h, i) => drawText(g, h[0], 100 + i * 440, H - 150, 4.5, h[1]));
 
       Music.draw(g, focus === 'music');
     }
 
-    return { axis: 'v', draw };
+    function key(k) {
+      if (focus !== 'list') return false;
+      const m = menu(), c = m[cat], i = Math.min(items[c.key] || 0, c.items.length - 1);
+      if (k === 'left' || k === 'right') {
+        const next = Math.max(0, Math.min(m.length - 1, cat + (k === 'left' ? -1 : 1)));
+        if (next !== cat) catAt = clock;
+        cat = next;
+      } else if (k === 'up') items[c.key] = Math.max(0, i - 1);
+      else if (k === 'down' && i === c.items.length - 1) { if (Music.enabled()) focus = 'music'; }
+      else if (k === 'down') items[c.key] = i + 1;
+      else if (k === 'ok') activate(c.items[i]);
+      else return false;
+      return true;
+    }
+
+    return { draw, key };
   })();
 
   // ---- Media bar: categories across, items down, on a moving wave -----------
@@ -757,18 +882,6 @@ App.screens.home = (() => {
     const isApp = r => !r.folder && !r.child && !r.connect && !r.settings;
     let cat = 0, catPos = 0;
     const item = {}, itemPos = {};
-
-    // The menu, rebuilt from the home rows each frame (inputs come and go).
-    function menu() {
-      const all = playableApps();
-      const out = [
-        { key: 'tv', name: 'TV & Video', items: all.filter(a => a.group !== 'games').map(app => ({ app })) },
-        { key: 'games', name: 'Games', items: all.filter(a => a.group === 'games').map(app => ({ app })) },
-      ];
-      if (Phones.enabled()) out.push({ key: 'connect', name: 'Phone', items: [{ app: CONNECT, connect: true }] });
-      out.push({ key: 'settings', name: 'Settings', items: [{ app: SETTINGS, settings: true }] });
-      return out.filter(c => c.items.length);
-    }
 
     function wave(g) {
       const grad = g.createLinearGradient(0, 0, 0, H);
@@ -879,7 +992,7 @@ App.screens.home = (() => {
     return { draw, key };
   })();
 
-  const LAYOUTS = { bonito, horizon, departures, teletext, mediabar };
+  const LAYOUTS = { bonito, horizon, dial, panorama, mediabar };
   const layout = () => LAYOUTS[design.key] || bonito;
 
   function enter() {

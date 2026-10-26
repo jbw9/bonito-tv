@@ -242,5 +242,16 @@ App.screens.dino = (() => {
     if (arg && arg.play) start();
   }
 
-  return { enter, update, draw, key, keyUp };
+  // The website's gallery (js/show.js): jump when something low is close, and hold the
+  // jump until the top of it so it's a full one; duck under the high pterodactyls.
+  function auto() {
+    if (mode !== 'play') return null;
+    if (dino.y < GROUND) return dino.vy < 0 ? 'ok' : null;
+    const o = obstacles.find(o => o.x + o.w > DINO_X);
+    if (!o || o.x - DINO_X > speed * 0.32) return null;
+    if (o.kind === 'ptero' && o.top < GROUND - 90) return 'down';
+    return 'ok';
+  }
+
+  return { enter, update, draw, key, keyUp, auto };
 })();

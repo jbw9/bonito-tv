@@ -196,5 +196,12 @@ App.screens.flappy = (() => {
     if (arg && arg.play) start();
   }
 
-  return { enter, update, draw, key };
+  // The website's gallery (js/show.js): flap whenever it drops below the next gap.
+  function auto() {
+    if (mode !== 'play' || bird.vy < 0) return null;
+    const next = pipes.find(p => p.x + CAP_W > BIRD_X - R);
+    return bird.y > (next ? next.gapY + 20 : H / 2) ? 'ok' : null;
+  }
+
+  return { enter, update, draw, key, auto };
 })();

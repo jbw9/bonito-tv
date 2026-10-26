@@ -11,9 +11,11 @@ README), as an app on Google TV / Android TV / Fire TV (`bonito.apk`, built by
   page with a remote, keyboard and volume, and the party games (Trivia, Tic Tac Toe, Air
   Hockey, Pong, Light Cycles, Wordle race) use phones as controllers. Each TV has its own
   random room code, so phones only ever reach the TV they scanned.
-- **Five designs**, each its own home screen layout: Bonito (dot-matrix list), Horizon
-  (landscape, big clock and app dock), Departures (split-flap board), Teletext and Media bar.
-  Pick in Settings or from the phone setup page.
+- **Five designs**, each its own home screen layout: Bonito (dot-matrix list, inspired by
+  [@tyler_](https://www.instagram.com/tyler_/)), Horizon (landscape, big clock and app dock,
+  inspired by [@joshuaseage](https://www.instagram.com/joshuaseage/)), Dial (apps as stations
+  on a radio dial, after Dieter Rams' Braun radios), Panorama (big sliding type, after the
+  Zune HD) and Media bar. Pick in Settings or from the phone setup page.
 
 - **App launcher.** Netflix, YouTube, Hulu, Disney+, Prime Video, Max, Peacock, Apple TV,
   Paramount+ and Spotify, each with its logo. Only the apps installed on your TV appear.

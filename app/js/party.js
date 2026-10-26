@@ -11,7 +11,8 @@ function makeParty(title, max) {
 
     find: id => party.players.find(p => p.id === id),
 
-    join(id, name) {
+    // `bot`: a pretend phone from the website's gallery (js/show.js), steered like the CPU.
+    join(id, name, bot) {
       name = String(name || '').toUpperCase().slice(0, 12);
       const p = party.find(id);
       if (p) {
@@ -20,7 +21,7 @@ function makeParty(title, max) {
       }
       if (!party.open || party.players.length >= max) return;
       const free = PARTY_COLORS.find(c => !party.players.some(q => q.color === c[1]));
-      party.players.push({ id, name: name || free[0], label: free[0], color: free[1], wins: 0 });
+      party.players.push({ id, name: name || free[0], label: free[0], color: free[1], wins: 0, cpu: !!bot, bot: !!bot });
     },
 
     // Seats start empty; phones still on the Games tab take theirs again by themselves.
@@ -54,7 +55,7 @@ function makeParty(title, max) {
 
     // join / leave / start from phones; anything else is the game's own.
     phone(event, p, start) {
-      if (event === 'join') party.join(p.id, p.name);
+      if (event === 'join') party.join(p.id, p.name, p.bot);
       else if (event === 'leave' && party.open) party.players = party.players.filter(q => q.id !== p.id);
       else if (event === 'start' && party.open) start();
       else return false;
@@ -65,7 +66,8 @@ function makeParty(title, max) {
       return {
         mode: party.open ? 'lobby' : mode,
         seats: max,
-        players: party.players.map(p => Object.assign({ id: p.id, name: p.name, label: p.label, color: p.color, wins: p.wins }, extra && extra(p))),
+        // Bots hand over everything, so the gallery can draw what their phones would show.
+        players: party.players.map(p => Object.assign({ id: p.id, name: p.name, label: p.label, color: p.color, wins: p.wins }, extra && extra(p), p.bot && { bot: Object.assign({}, p) })),
       };
     },
 

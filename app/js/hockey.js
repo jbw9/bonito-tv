@@ -75,7 +75,9 @@ App.screens.hockey = (() => {
     const goalX = p.side ? X0 + TW : X0, back = p.side ? 1 : -1;
     if (mine) {
       p.tx = puck.x + back * PAD_R * 0.6;
-      p.ty = puck.y;
+      // The gallery's bots (js/show.js) strike off-centre, or two of them only ever
+      // knock it straight back and forth.
+      p.ty = puck.y + (p.bot ? 34 * Math.sin(clock * 1.7 + p.side * 2) : 0);
     } else {
       p.tx = goalX - back * 160;
       p.ty = clamp(puck.y, MID_Y - GOAL / 2, MID_Y + GOAL / 2);

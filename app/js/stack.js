@@ -142,5 +142,14 @@ App.screens.stack = (() => {
     if (arg && arg.play) start();
   }
 
-  return { enter, update, draw, key };
+  // The website's gallery (js/show.js): drop near the tower, usually a little off so
+  // pieces get sliced, until it misses.
+  function auto() {
+    if (mode !== 'play') return null;
+    const top = layers[layers.length - 1];
+    if (block.aim == null) block.aim = Math.random() < 0.3 ? 0 : (Math.random() * 2 - 1) * 46;
+    return Math.abs(block.x - (top.x + block.aim)) < 14 ? 'ok' : null;
+  }
+
+  return { enter, update, draw, key, auto };
 })();

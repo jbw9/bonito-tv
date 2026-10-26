@@ -256,16 +256,21 @@ function boot() {
   });
 
   Platform.scanApps();
-  App.home();
-  Music.start();
-  Jam.start();
-  Phones.start();
+  // The website's gallery TV plays a game by itself and stays off the network.
+  if (Show.on) Show.start();
+  else {
+    App.home();
+    Music.start();
+    Jam.start();
+    Phones.start();
+  }
 
   let last = performance.now();
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     clock += dt;
+    if (Show.on) Show.update(dt);
     // Not over an HDMI input, which would stay up after Back, or YouTube, whose key
     // presses never reach the launcher.
     const busy = [App.screens.popeyes, App.screens.splash, App.screens.input, App.screens.youtube].indexOf(App.current) >= 0;
@@ -278,7 +283,6 @@ function boot() {
     if (!bare && App.current !== App.screens.home) Music.draw(ctx);
     if (!bare) Jam.draw(ctx);
     Phones.draw(ctx);
-    if (!bare && App.current !== App.screens.youtube && App.current !== App.screens.input) drawScanlines(ctx);
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
