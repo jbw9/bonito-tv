@@ -16,8 +16,7 @@ README), as an app on Google TV / Android TV / Fire TV (`bonito.apk`, built by
   Pick in Settings or from the phone setup page.
 
 - **App launcher.** Netflix, YouTube, Hulu, Disney+, Prime Video, Max, Peacock, Apple TV,
-  Paramount+, Crunchyroll, Plex, Tubi, Twitch, ESPN and Spotify, each with its own icon. Only
-  the apps installed on your TV appear.
+  Paramount+ and Spotify, each with its logo. Only the apps installed on your TV appear.
 - **HDMI inputs.** A port appears in the list while something is plugged into it.
 - **Clock, date and weather.** Weather comes from [Open-Meteo](https://open-meteo.com), with
   no account needed.

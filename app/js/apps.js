@@ -11,11 +11,6 @@ const CATALOG = [
   { key: 'peacock', name: 'PEACOCK', short: 'PEACOCK', color: '#FFD60A', match: /peacock/, fallbackId: '3202006020991' },
   { key: 'appletv', name: 'APPLE TV', short: 'APPLE TV', color: '#B8BEC6', match: /^apple tv/, fallbackId: '3201807016597' },
   { key: 'paramount', name: 'PARAMOUNT+', short: 'PARAMOUNT+', color: '#0064FF', match: /paramount/, fallbackId: '3201710014981' },
-  { key: 'crunchyroll', name: 'CRUNCHYROLL', short: 'CRUNCHYROLL', color: '#F47521', match: /crunchyroll/ },
-  { key: 'plex', name: 'PLEX', short: 'PLEX', color: '#E5A00D', match: /^plex/ },
-  { key: 'tubi', name: 'TUBI', short: 'TUBI', color: '#7408FF', match: /^tubi/ },
-  { key: 'twitch', name: 'TWITCH', short: 'TWITCH', color: '#9146FF', match: /^twitch/ },
-  { key: 'espn', name: 'ESPN', short: 'ESPN', color: '#D50A0A', match: /^espn/ },
   { key: 'spotify', name: 'SPOTIFY', short: 'SPOTIFY', color: '#1DB954', match: /^spotify/, fallbackId: '3201606009684' },
   // Not apps: plain screens. `key` is the screen; `group: 'games'` puts it in the home screen's GAMES folder.
   { key: 'flappy', name: 'FLAPPY BIRD', short: 'FLAPPY', color: '#F4F6F8', game: true, group: 'games' },
@@ -40,7 +35,7 @@ const CATALOG = [
   { key: 'hdmi4', name: 'HDMI 4', short: 'HDMI 4', color: '#FF7A1A', hdmi: 4 },
 ];
 
-const DEFAULT_ON = ['youtube', 'netflix', 'hulu', 'disney', 'prime', 'max', 'peacock', 'appletv', 'paramount', 'crunchyroll', 'plex', 'tubi', 'twitch', 'espn', 'flappy', 'dino', 'stack', 'blackjack', 'roulette', 'wordle', 'trivia', 'ttt', 'hockey', 'pong', 'cycles', 'popeyes', 'hdmi1', 'hdmi2', 'hdmi3', 'hdmi4'];
+const DEFAULT_ON = ['youtube', 'netflix', 'hulu', 'disney', 'flappy', 'dino', 'stack', 'blackjack', 'roulette', 'wordle', 'trivia', 'ttt', 'hockey', 'pong', 'cycles', 'popeyes', 'hdmi1', 'hdmi2', 'hdmi3', 'hdmi4'];
 
 // Your own apps from config.local.js, first and on by default:
 //   apps: [{ key: 'myapp', name: 'MY APP', short: 'MY APP', color: '#FF7575', appId: 'Abc1234567.MyApp' }]

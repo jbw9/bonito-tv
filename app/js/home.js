@@ -118,7 +118,7 @@ App.screens.home = (() => {
 
   // Catalog names are in capitals for the dot-matrix lettering; designs in a normal
   // typeface want them as written.
-  const AS_IS = { TV: 'TV', HDMI: 'HDMI', ESPN: 'ESPN', YOUTUBE: 'YouTube' };
+  const AS_IS = { TV: 'TV', HDMI: 'HDMI', YOUTUBE: 'YouTube' };
   function title(name) {
     return name.split(' ').map(w => AS_IS[w] || w.charAt(0) + w.slice(1).toLowerCase()).join(' ');
   }
