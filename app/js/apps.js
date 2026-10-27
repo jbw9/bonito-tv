@@ -39,6 +39,9 @@ const DEFAULT_ON = ['youtube', 'netflix', 'hulu', 'disney', 'flappy', 'dino', 's
 
 // Your own apps from config.local.js, first and on by default:
 //   apps: [{ key: 'myapp', name: 'MY APP', short: 'MY APP', color: '#FF7575', appId: 'Abc1234567.MyApp' }]
-// A logo at img/logos/<key>.png shows when one is selected.
-CATALOG.unshift(...(CONFIG.apps || []));
-(CONFIG.apps || []).forEach(a => DEFAULT_ON.push(a.key));
+// A logo at img/logos/<key>.png shows when one is selected. A built-in app's key moves that
+// app up there too, in the order given: apps: [{ key: 'myapp', ... }, 'youtube', 'spotify']
+CONFIG.apps = (CONFIG.apps || []).map(a => typeof a === 'string' ? CATALOG.find(c => c.key === a) : a).filter(Boolean);
+CONFIG.apps.forEach(a => { if (CATALOG.includes(a)) CATALOG.splice(CATALOG.indexOf(a), 1); });
+CATALOG.unshift(...CONFIG.apps);
+CONFIG.apps.forEach(a => DEFAULT_ON.push(a.key));

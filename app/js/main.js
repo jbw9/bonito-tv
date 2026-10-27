@@ -10,9 +10,15 @@ const settings = Object.assign(
   // New key so TVs that saved the old app list pick up the new defaults.
   Platform.load('launcher', {})
 );
+// The defaults these settings were saved with (before that was kept: the built-in ones).
+// An app that has become a default since, like one newly listed in CONFIG.apps, turns on
+// once; turning it off again in Settings sticks.
+const seenDefaults = settings.defaults || DEFAULT_ON.filter(k => !CONFIG.apps.some(a => a.key === k));
 CATALOG.forEach(a => {
-  if (!(a.key in settings.apps)) settings.apps[a.key] = DEFAULT_ON.indexOf(a.key) >= 0;
+  const on = DEFAULT_ON.indexOf(a.key) >= 0;
+  if (!(a.key in settings.apps) || (on && seenDefaults.indexOf(a.key) < 0)) settings.apps[a.key] = on;
 });
+settings.defaults = DEFAULT_ON.slice();
 
 function saveSettings() {
   Platform.save('launcher', settings);
@@ -273,16 +279,16 @@ function boot() {
     last = now;
     clock += dt;
     if (Show.on) Show.update(dt);
-    // Not over an HDMI input, which would stay up after Back, or YouTube, whose key
-    // presses never reach the launcher.
-    const busy = [App.screens.popeyes, App.screens.splash, App.screens.input, App.screens.youtube].indexOf(App.current) >= 0;
+    // Not over an HDMI input, which would stay up after Back, YouTube, whose key
+    // presses never reach the launcher, or Spotify, which is meant to be left on.
+    const busy = [App.screens.popeyes, App.screens.splash, App.screens.input, App.screens.youtube, App.screens.spotify].indexOf(App.current) >= 0;
     if (now - lastKey > 10 * 60e3 && !busy) App.go('popeyes');
     App.current.update(dt);
     App.current.draw(ctx);
-    // Home draws it itself, with the controls row.
+    // Home draws it itself, with the controls row, and Spotify has its own controls.
     // The Popeyes menu board stays clear of overlays.
     const bare = App.current === App.screens.splash || App.current === App.screens.popeyes;
-    if (!bare && App.current !== App.screens.home) Music.draw(ctx);
+    if (!bare && App.current !== App.screens.home && App.current !== App.screens.spotify) Music.draw(ctx);
     if (!bare) Jam.draw(ctx);
     Phones.draw(ctx);
     requestAnimationFrame(frame);

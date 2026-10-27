@@ -264,7 +264,7 @@ const Jam = (() => {
         const next = q ? q.queue.map(t => trackInfo(t)) : [];
         const handed = picks[0] && picks[0].handed ? next.findIndex(t => t.uri === picks[0].uri) : -1;
         if (handed >= 0) next.splice(handed, 1);
-        upcoming = picks.concat(next).slice(0, 3);
+        upcoming = picks.concat(next).slice(0, 10);
         return publish({
           now: now && trackInfo(now, true),
           playback: now && { playing: p.is_playing, progress: p.progress_ms, duration: now.duration_ms, repeat: p.repeat_state, shuffle: p.shuffle_state },
