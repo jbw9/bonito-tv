@@ -4,6 +4,7 @@
 # Usage: ./deploy.sh <tv-ip> [design]
 #        design: the look it starts on: bonito (default), horizon, dial, panorama or mediabar
 # Env:   CERT_PROFILE  certificate profile name from Tizen Certificate Manager (default: tv)
+#        ROOM          pin this TV's phone room (4-8 letters) instead of a random one
 #        TIZEN_HOME    Tizen Studio install dir (default: ~/tizen-studio)
 set -euo pipefail
 
@@ -31,9 +32,11 @@ fi
 # Signing writes files into the folder it packages, so package a copy.
 rm -rf build dist
 mkdir -p build dist/launcher
-cp -R app build/launcher
+# -L: config.local.js may be a link to a private repo; copy what it points at.
+cp -RL app build/launcher
 # The picked look goes after anything in config.local.js, so it wins.
 if [ -n "$DESIGN" ]; then echo "CONFIG.design = '$DESIGN';" >> build/launcher/config.local.js; fi
+if [ -n "${ROOM:-}" ]; then echo "CONFIG.room = '$ROOM';" >> build/launcher/config.local.js; fi
 # -o is resolved against the tizen CLI's own folder unless absolute.
 "$TIZEN" package -t wgt -s "$PROFILE" -o "$PWD/dist/launcher" -- build/launcher
 # The TV's installer fails silently on file names with spaces (the .wgt is named after <name>).
