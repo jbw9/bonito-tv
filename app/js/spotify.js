@@ -77,30 +77,47 @@ App.screens.spotify = (() => {
     img.src = url;
   }
 
-  // The font is capitals, digits and some punctuation, with no accents.
+  // The dot font is capitals, digits and some punctuation, with no accents. Accented letters
+  // lose their accents; other scripts are kept whole for the system font (js/font.js), since
+  // stripping marks from them would break Korean syllables apart.
   function clean(s) {
-    return s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[‘’]/g, "'").replace(/[“”]/g, '"')
-      .replace(/[–—]/g, '-').toUpperCase().split('').filter(ch => GLYPHS[ch]).join('').replace(/\s+/g, ' ').trim();
+    s = s.replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/[–—]/g, '-').toUpperCase();
+    return Array.from(s, ch => {
+      const plain = ch.normalize('NFD').replace(/[̀-ͯ]/g, '');
+      return GLYPHS[plain] ? plain : ch < '\x80' ? '' : ch;
+    }).join('').replace(/\s+/g, ' ').trim();
   }
 
   // Shrinks text to fit `width` down to `min`, then cuts it short.
   function fit(text, max, min, width) {
     text = clean(text);
-    const cell = Math.max(min, Math.min(max, width / (text.length * 6)));
-    const chars = Math.floor(width / (6 * cell));
-    return { cell, text: text.length > chars ? text.slice(0, chars - 2).trim() + '..' : text };
+    const cell = Math.max(min, Math.min(max, width / (textWidth(text, 1) + 1)));
+    if (textWidth(text, cell) <= width) return { cell, text };
+    const chars = Array.from(text);
+    while (chars.length && textWidth(chars.join('').trim() + '..', cell) > width) chars.pop();
+    return { cell, text: chars.join('').trim() + '..' };
   }
 
   function wrap(text, width) {
-    const chars = Math.floor(width / (6 * CELL));
+    const fits = s => textWidth(s, CELL) <= width;
     const rows = [];
     let row = '';
     text.split(' ').forEach(word => {
       const next = row ? row + ' ' + word : word;
-      if (next.length > chars && row) {
-        rows.push(row);
-        row = word;
-      } else row = next;
+      if (fits(next)) {
+        row = next;
+        return;
+      }
+      if (row) rows.push(row);
+      row = '';
+      // Chinese and Japanese have no spaces, so a word too long for a row breaks anywhere.
+      Array.from(word).forEach(ch => {
+        if (row && !fits(row + ch)) {
+          rows.push(row);
+          row = '';
+        }
+        row += ch;
+      });
     });
     if (row) rows.push(row);
     return rows;

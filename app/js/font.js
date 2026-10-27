@@ -60,8 +60,43 @@ const GLYPHS = {
 
 const textCache = new Map();
 
+// Characters past ASCII that the dot font doesn't have (Chinese, Korean, Cyrillic...) are
+// drawn in the system font at the glyphs' height. Runs are kept together so scripts that
+// join letters still shape.
+function runs(str) {
+  const out = [];
+  for (const ch of str) {
+    const dots = !!GLYPHS[ch] || ch < '\x80';
+    const last = out[out.length - 1];
+    if (last && last.dots === dots) last.text += ch;
+    else out.push({ dots, text: ch });
+  }
+  return out;
+}
+
+function systemFont(cell, style) {
+  return (style === 'thin' ? 'normal ' : 'bold ') + 8 * cell + 'px sans-serif';
+}
+
+const measureCtx = document.createElement('canvas').getContext('2d');
+const systemWidths = new Map(); // text -> width at cell 10
+function systemWidth(text, cell) {
+  let w = systemWidths.get(text);
+  if (w == null) {
+    if (systemWidths.size > 500) systemWidths.clear();
+    measureCtx.font = systemFont(10, 'led');
+    w = measureCtx.measureText(text).width;
+    systemWidths.set(text, w);
+  }
+  return w * cell / 10;
+}
+
 function textWidth(str, cell) {
-  return Math.max(0, String(str).length * 6 - 1) * cell;
+  str = String(str);
+  if (/^[\x00-\x7f]*$/.test(str)) return Math.max(0, str.length * 6 - 1) * cell;
+  let w = 0;
+  runs(str).forEach(r => { w += r.dots ? r.text.length * 6 * cell : systemWidth(r.text, cell) + cell; });
+  return Math.max(0, w - cell);
 }
 
 function isLit(rows, x, y) {
@@ -134,12 +169,23 @@ function renderText(str, cell, color, style) {
   c.height = Math.ceil(7 * cell) + pad * 2;
   c.pad = pad;
   const g = c.getContext('2d');
-  for (let i = 0; i < str.length; i++) {
-    const rows = GLYPHS[str[i]] || GLYPHS[' '];
-    const ox = pad + i * 6 * cell;
-    if (style === 'thin') drawThinRows(g, rows, ox, pad, cell, color);
-    else drawLedRows(g, rows, ox, pad, cell, color, 0.12);
-  }
+  let ox = pad;
+  runs(str).forEach(run => {
+    if (!run.dots) {
+      g.font = systemFont(cell, style);
+      g.fillStyle = color;
+      g.textBaseline = 'middle';
+      g.fillText(run.text, ox, pad + 3.5 * cell);
+      ox += systemWidth(run.text, cell) + cell;
+      return;
+    }
+    for (let i = 0; i < run.text.length; i++) {
+      const rows = GLYPHS[run.text[i]] || GLYPHS[' '];
+      if (style === 'thin') drawThinRows(g, rows, ox, pad, cell, color);
+      else drawLedRows(g, rows, ox, pad, cell, color, 0.12);
+      ox += 6 * cell;
+    }
+  });
   textCache.set(key, c);
   return c;
 }
