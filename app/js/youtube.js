@@ -89,6 +89,17 @@ App.screens.youtube = (() => {
         d.write(html.replace(/<head[^>]*>/, m => m + HEAD));
         d.close();
         frame.focus();
+        // Signing in ends by sending the page to youtube.com, which refuses to load in a frame
+        // (ERR_BLOCKED_BY_RESPONSE), or by reloading it, which would load the launcher. Either
+        // way the frame has left YouTube, so it opens again; the sign-in is already saved.
+        const own = frame;
+        own.addEventListener('load', () => {
+          const doc = own.contentDocument;
+          if (frame !== own || (doc && doc.querySelector('base[href="https://www.youtube.com/tv"]'))) return;
+          own.remove();
+          frame = null;
+          open();
+        });
       })
       .catch(err => {
         console.error('youtube', err && err.message);
