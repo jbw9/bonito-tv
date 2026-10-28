@@ -157,11 +157,11 @@ const Music = (() => {
       const player = new Spotify.Player({
         name: 'TV',
         getOAuthToken: cb => getToken().then(cb, fail),
-        volume: 0.5,
+        volume: 0,
       });
       player.addListener('ready', e => {
         tvId = e.device_id;
-        if (speaker() === 'tv') play(tvId).catch(fail);
+        if (speaker() === 'tv') play(tvId).then(() => fadeIn(player)).catch(fail);
       });
       player.addListener('player_state_changed', poll);
       ['initialization_error', 'authentication_error', 'account_error'].forEach(name => {
@@ -173,6 +173,17 @@ const Music = (() => {
     s.src = 'https://sdk.scdn.co/spotify-player.js';
     s.onerror = () => fail(new Error('could not load player'));
     document.head.appendChild(s);
+  }
+
+  // Music starts by itself at boot, so it comes in quietly rather than filling the room: from
+  // silent up to 20%, which the phone's Spotify turns up from there.
+  function fadeIn(player) {
+    let v = 0;
+    const timer = setInterval(() => {
+      v = Math.min(0.2, v + 0.01);
+      player.setVolume(v);
+      if (v >= 0.2) clearInterval(timer);
+    }, 250);
   }
 
   function playOnEcho() {
@@ -366,6 +377,11 @@ const Music = (() => {
     let text = track ? clean(track.name + ' - ' + track.artist) : status;
     if (track && focused != null) text += '   ON ' + (speaker() === 'tv' ? 'TV' : 'ECHO DOT');
     const cell = 3.5;
+    // Other screens put their own hints and scores along the bottom, from x = 600 or so.
+    if (focused == null && textWidth(text, cell) > 460) {
+      while (textWidth(text + '...', cell) > 460) text = text.slice(0, -1);
+      text = text.trimEnd() + '...';
+    }
     // Home (which passes `focused`) is in the design's colours; other screens are dark.
     const ink = focused != null ? [design.soft, design.mute] : ['#d3d7dd', '#7d838c'];
     if (text) drawText(g, text, x, cy - 3.5 * cell, cell, playing ? ink[0] : ink[1], { style: 'thin' });

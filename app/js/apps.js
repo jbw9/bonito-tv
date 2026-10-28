@@ -45,3 +45,6 @@ CONFIG.apps = (CONFIG.apps || []).map(a => typeof a === 'string' ? CATALOG.find(
 CONFIG.apps.forEach(a => { if (CATALOG.includes(a)) CATALOG.splice(CATALOG.indexOf(a), 1); });
 CATALOG.unshift(...CONFIG.apps);
 CONFIG.apps.forEach(a => DEFAULT_ON.push(a.key));
+
+// Built-in apps this TV never shows, even ones it already saved as on: hide: ['hulu', 'disney']
+(CONFIG.hide || []).forEach(k => { const i = CATALOG.findIndex(a => a.key === k); if (i >= 0) CATALOG.splice(i, 1); });
